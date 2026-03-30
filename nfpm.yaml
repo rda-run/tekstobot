@@ -1,0 +1,44 @@
+name: "tekstobot"
+arch: "amd64"
+platform: "linux"
+version: "${VERSION}"
+section: "default"
+priority: "extra"
+maintainer: "Rodrigo Avila <me@rda.run>"
+description: "TekstoBot - Smart audio transcription servant for WhatsApp via Whisper (STT)."
+vendor: "Rodrigo de Avila"
+homepage: "https://tb.rda.run"
+license: "MIT"
+
+# Dependencies
+depends:
+  - podman
+recommends:
+  - postgresql
+
+contents:
+  - src: "bin/tekstobot"
+    dst: "/usr/bin/tekstobot"
+    type: "file"
+    file_info:
+      mode: 0755
+  
+  - src: ".env.example"
+    dst: "/etc/tekstobot.env.example"
+    type: "file"
+
+  # Templates for Quadlets
+  - src: "deploy/whisper-gpu.container"
+    dst: "/usr/share/tekstobot/deploy/whisper-gpu.container"
+  - src: "deploy/whisper-cpu.container"
+    dst: "/usr/share/tekstobot/deploy/whisper-cpu.container"
+  
+  - src: "deploy/tekstobot.service"
+    dst: "/usr/lib/systemd/system/tekstobot.service"
+
+  # Persistent data directories setup (as empty files/dirs is tricky in nfpm, 
+  # but we can ensure they are there via postinstall)
+
+scripts:
+  postinstall: "scripts/postinstall.sh"
+  postremove: "scripts/postremove.sh"

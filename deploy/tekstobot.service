@@ -1,0 +1,18 @@
+[Unit]
+Description=TekstoBot Service - WhatsApp Audio Transcription Bot
+After=network.target whisper.service
+Requires=whisper.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/lib/tekstobot
+ExecStart=/usr/bin/tekstobot
+Restart=always
+RestartSec=10
+EnvironmentFile=-/etc/tekstobot.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

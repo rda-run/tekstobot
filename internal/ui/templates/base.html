@@ -1,0 +1,247 @@
+{{define "base.html"}}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TekstoBot Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-950 antialiased h-screen flex flex-col">
+    {{if .MigrationError}}
+    <!-- Maintenance / Error Only Mode -->
+    <div class="fixed inset-0 bg-white z-[100] flex items-center justify-center p-6">
+        <div class="max-w-xl w-full text-center space-y-6 animate-in fade-in zoom-in duration-300">
+            <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div class="space-y-2">
+                <h1 class="text-3xl font-bold tracking-tight text-zinc-900">Critical Database Failure</h1>
+                <p class="text-zinc-500 text-lg">System migrations could not be applied correctly.</p>
+            </div>
+            <div class="p-4 rounded-lg bg-zinc-50 border border-zinc-200 text-left font-mono text-xs text-rose-700 overflow-x-auto">
+                {{.MigrationError}}
+            </div>
+            <div class="space-y-4">
+                <div class="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900 text-left">
+                    <p class="font-semibold mb-1">What to do now?</p>
+                    <p>The WhatsApp bot has been disabled for safety to prevent data corruption. To diagnose the problem, access the server terminal and run:</p>
+                    <code class="block mt-2 font-mono bg-white p-2 rounded border border-amber-300">journalctl -u tekstobot -n 50</code>
+                </div>
+                <p class="text-xs text-zinc-400 italic">TekstoBot v{{.Version}} &bull; Maintenance Mode Active</p>
+            </div>
+        </div>
+    </div>
+    {{else}}
+    <header class="bg-white border-b border-zinc-200 sticky top-0 z-40 w-full backdrop-blur">
+        <div class="container mx-auto px-6 h-14 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+				<h1 class="text-lg font-semibold tracking-tight">TekstoBot <span class="text-xs font-normal text-zinc-400 ml-1">v{{.Version}}</span></h1>
+				<button onclick="document.getElementById('access-modal').classList.remove('hidden')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 h-9 px-4 py-2">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+					Manage Access
+					<div id="pending-badge" class="hidden absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white border-2 border-white">
+						0
+					</div>
+				</button>
+            </div>
+            <div id="status-container" hx-get="/status" hx-trigger="load, every 5s" class="flex items-center space-x-3">
+                <span class="text-xs text-zinc-500 italic">Loading status...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-auto container mx-auto px-6 py-8">
+		<div class="grid grid-cols-1 gap-8">
+			<div class="space-y-6">
+				<div class="flex items-center justify-between">
+					<h2 class="text-2xl font-bold tracking-tight text-zinc-900">Processing History</h2>
+				</div>
+				<div id="media-list" hx-get="/media" hx-trigger="load, access-updated from:body" class="space-y-4">
+					<!-- Loaded via htmx -->
+					<div class="flex justify-center py-12">
+						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+    </main>
+
+	<!-- Management Modal -->
+	<div id="access-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+		<div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+			<div class="flex items-center justify-between p-6 border-b border-zinc-100">
+				<h3 class="text-xl font-bold text-zinc-900">Access Management</h3>
+				<button onclick="document.getElementById('access-modal').classList.add('hidden')" class="text-zinc-400 hover:text-zinc-600">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+				</button>
+			</div>
+			
+			<div class="flex-1 overflow-y-auto p-6 space-y-8">
+				<!-- Unauthorized Attempts -->
+				<div class="space-y-4">
+					<h4 class="text-sm font-semibold text-zinc-900 uppercase tracking-wider flex items-center">
+						Access Attempts (Pending)
+					</h4>
+					<div id="unauthorized-list" hx-get="/unauthorized" hx-trigger="load">
+						<!-- Loaded via htmx -->
+					</div>
+				</div>
+
+				<div class="h-px bg-zinc-100"></div>
+
+				<!-- Add New Phone -->
+				<div class="space-y-4">
+					<h4 class="text-sm font-semibold text-zinc-900 uppercase tracking-wider">Add Manually</h4>
+					<form hx-post="/phones/add" hx-target="#phones-list" hx-on::after-request="this.reset()" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<input type="text" name="phone" placeholder="Number (e.g., 5511...)" required class="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-950">
+						<div class="flex space-x-2">
+							<input type="text" name="description" placeholder="Name/Description" class="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-950">
+							<button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium bg-zinc-900 text-zinc-50 shadow hover:bg-zinc-900/90 h-9 px-4 py-2">Add</button>
+						</div>
+					</form>
+				</div>
+
+				<div class="h-px bg-zinc-100"></div>
+
+				<!-- Allowed Phones -->
+				<div class="space-y-4">
+					<h4 class="text-sm font-semibold text-zinc-900 uppercase tracking-wider">Whitelisted (Authorized)</h4>
+					<div id="phones-list" hx-get="/phones" hx-trigger="load">
+						<!-- Loaded via htmx -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="qr-modal-container"></div>
+    {{end}}
+</body>
+</html>
+{{end}}
+
+{{define "status.html"}}
+	{{if .Connected}}
+		<div class="inline-flex items-center rounded-md border border-transparent bg-zinc-900 px-2.5 py-0.5 text-xs font-semibold text-zinc-50 shadow">
+			<span class="mr-1.5 flex h-2 w-2 rounded-full bg-emerald-500"></span>
+			Connected
+		</div>
+		<div id="qr-modal-container" hx-swap-oob="true"></div>
+	{{else}}
+		<div class="inline-flex items-center rounded-md border border-zinc-200 px-2.5 py-0.5 text-xs font-semibold text-zinc-950 transition-colors">
+			<span class="mr-1.5 flex h-2 w-2 rounded-full bg-rose-500"></span>
+			Disconnected
+		</div>
+		<div id="qr-modal-container" hx-swap-oob="true">
+			{{if .HasQR}}
+			<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-in fade-in duration-200">
+				<div class="bg-white p-6 rounded-xl shadow-lg text-center max-w-sm w-full animate-in zoom-in-95 duration-200">
+					<h3 class="text-lg font-semibold tracking-tight text-zinc-950 mb-4">WhatsApp Pairing</h3>
+					<img src="/qr.png?v={{.Time}}" alt="QR Code" class="mx-auto rounded-md shadow-sm w-64 h-64 border border-zinc-200" />
+					<p class="text-sm text-zinc-500 mt-4 leading-relaxed">Scan the QR Code with the app on your smartphone to connect the bot.</p>
+				</div>
+			</div>
+			{{end}}
+		</div>
+	{{end}}
+
+	<div id="pending-badge" hx-swap-oob="true" class="{{if eq .PendingCount 0}}hidden{{end}} absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white border-2 border-white">
+		{{.PendingCount}}
+	</div>
+
+	<div id="unauthorized-list" hx-swap-oob="true">
+		{{template "unauthorized_list.html" .Attempts}}
+	</div>
+{{end}}
+
+{{define "unauthorized_list.html"}}
+<div class="space-y-2">
+    {{range .}}
+    <div class="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50/50 group">
+        <div class="flex flex-col">
+            <span class="text-sm font-semibold text-zinc-900">{{.PhoneNumber}}</span>
+            <span class="text-xs text-zinc-500">{{if .PushName}}{{.PushName}}{{else}}Unknown{{end}} &bull; {{.LastAttempt.Format "01/02 15:04"}}</span>
+        </div>
+        <div class="flex items-center space-x-1">
+            <button hx-get="/unauthorized/authorize?phone={{.PhoneNumber}}&name={{.PushName}}" hx-target="#unauthorized-list" hx-swap="innerHTML" class="inline-flex items-center justify-center p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-colors" title="Authorize">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <button hx-delete="/unauthorized/delete?phone={{.PhoneNumber}}" hx-target="#unauthorized-list" class="inline-flex items-center justify-center p-1.5 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Ignore">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            </button>
+        </div>
+    </div>
+    {{else}}
+    <p class="text-sm text-zinc-500 py-2 text-center border-dashed border border-zinc-200 rounded-lg italic">No pending attempts.</p>
+    {{end}}
+</div>
+
+<!-- Trigger list updates on other components -->
+<div hx-get="/phones" hx-target="#phones-list" hx-trigger="load" hx-swap-oob="true"></div>
+{{end}}
+
+{{define "phones_list.html"}}
+<ul class="divide-y divide-zinc-200 border-t border-zinc-200 mt-2 pt-2">
+    {{range .}}
+    <li class="py-3 flex justify-between items-center group">
+        <div>
+            <p class="text-sm font-medium leading-none">{{.PhoneNumber}}</p>
+            <p class="text-sm text-zinc-500 mt-1">{{.Description}}</p>
+        </div>
+        <button hx-delete="/phones/delete?id={{.ID}}" hx-target="#phones-list" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-zinc-100 hover:text-zinc-900 h-9 w-9 text-zinc-500 opacity-0 group-hover:opacity-100">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+        </button>
+    </li>
+    {{else}}
+    <p class="text-sm text-zinc-500 py-4 text-center">No registered phones.</p>
+    {{end}}
+</ul>
+{{end}}
+
+{{define "media_list.html"}}
+{{range .}}
+<details class="group rounded-lg border border-zinc-200 bg-white text-zinc-950 shadow-sm relative [&_summary::-webkit-details-marker]:hidden">
+    <summary class="flex justify-between items-center cursor-pointer p-4 select-none hover:bg-zinc-50/50 rounded-lg transition-colors">
+        <div class="flex flex-col space-y-1.5">
+			<div class="flex items-center space-x-2">
+				<span class="inline-flex items-center rounded-md border border-zinc-200 px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2">{{.MediaType}}</span>
+				{{if eq .Status "error"}}
+					<span class="inline-flex items-center rounded-md border border-transparent bg-rose-500/10 text-rose-500 px-2.5 py-0.5 text-xs font-semibold">Error</span>
+				{{else}}
+					<span class="inline-flex items-center rounded-md border border-transparent bg-zinc-900 text-zinc-50 px-2.5 py-0.5 text-xs font-semibold">Completed</span>
+				{{end}}
+			</div>
+            <span class="text-xs text-zinc-500 font-medium">From: {{.SenderPhone}} &bull; {{.CreatedAt.Format "01/02 at 15:04"}}</span>
+        </div>
+		<div class="flex items-center space-x-3">
+			<button hx-delete="/media/delete?id={{.ID}}" hx-target="#media-list" hx-confirm="Delete this file and record permanently?" title="Delete" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-zinc-200 hover:text-red-600 h-8 w-8 text-zinc-400 opacity-0 group-hover:opacity-100">
+				 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+			</button>
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-zinc-500 transition-transform duration-200 group-open:rotate-180"><polyline points="6 9 12 15 18 9"/></svg>
+		</div>
+    </summary>
+
+	<div class="p-4 pt-2 border-t border-zinc-100 bg-zinc-50/30 rounded-b-lg">
+		{{if eq .MediaType "audio"}}
+			<audio controls class="w-full h-10 mb-4 rounded-md outline-none border border-zinc-200 shadow-sm bg-white">
+				<source src="/{{.FilePath}}" type="audio/ogg">
+			</audio>
+		{{end}}
+		
+		<div class="rounded-md bg-white border border-zinc-200 px-4 py-3 text-sm text-zinc-800 font-mono break-words whitespace-pre-wrap shadow-sm">{{if .ExtractedText}}{{.ExtractedText}}{{else if .ErrorMessage}}{{.ErrorMessage}}{{else}}Processing...{{end}}</div>
+	</div>
+</details>
+{{else}}
+<div class="flex flex-col items-center justify-center py-12 text-center border-dashed border-2 border-zinc-200 rounded-lg">
+	<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-10 w-10 text-zinc-400 mb-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+	<p class="text-sm font-medium text-zinc-900">No Media</p>
+	<p class="text-sm text-zinc-500 mt-1">Processed media will automatically appear here.</p>
+</div>
+{{end}}
+{{end}}

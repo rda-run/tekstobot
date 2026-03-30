@@ -1,0 +1,13 @@
+[Container]
+Image=docker.io/fedirz/faster-whisper-server:latest-cuda
+ContainerName=tekstobot-whisper
+Environment=MODEL_NAME=medium
+PublishPort=8000:8000
+Volume=/var/lib/tekstobot/whisper/cache:/root/.cache/huggingface:Z
+PodmanArgs=--security-opt=label=disable --device=nvidia.com/gpu=all
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
