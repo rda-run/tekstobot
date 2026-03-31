@@ -8,6 +8,14 @@ TEMPLATE_DIR="/usr/share/tekstobot/deploy"
 
 mkdir -p "$QUADLET_DIR"
 
+# $1 == 1: Install
+# $1 == 2: Upgrade
+if [ "$1" = "1" ]; then
+    echo "Initial installation detected. Configuring services..."
+elif [ "$1" = "2" ]; then
+    echo "Upgrade detected. Re-verifying configuration..."
+fi
+
 if [ -x /usr/bin/nvidia-ctk ] || [ -f /usr/lib64/libcuda.so ]; then
     echo "NVIDIA detected. Configuring Whisper for GPU (CUDA)..."
     cp "$TEMPLATE_DIR/whisper-gpu.container" "$QUADLET_DIR/whisper.container"

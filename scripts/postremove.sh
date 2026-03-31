@@ -3,12 +3,18 @@
 # TekstoBot RPM Post-remove Script
 # Cleans up files and reloads systemd
 
-QUADLET_DIR="/etc/containers/systemd"
+# $1 == 0: Full uninstall
+# $1 >= 1: Upgrade (skip cleanup)
 
-echo "Cleaning up TekstoBot Quadlets..."
-rm -f "$QUADLET_DIR/whisper.container"
+if [ "$1" = "0" ]; then
+    QUADLET_DIR="/etc/containers/systemd"
+    echo "Uninstall detected. Cleaning up TekstoBot Quadlets..."
+    rm -f "$QUADLET_DIR/whisper.container"
+    
+    echo "Reloading systemd..."
+    systemctl daemon-reload
+else
+    echo "Upgrade detected. Skipping cleanup of Quadlets."
+fi
 
-echo "Reloading systemd..."
-systemctl daemon-reload
-
-echo "TekstoBot removal clean up finished."
+echo "TekstoBot removal script finished."
