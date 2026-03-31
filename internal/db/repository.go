@@ -71,7 +71,13 @@ func (r *Repository) DeleteAllowedPhone(id int) error {
 }
 
 func (r *Repository) ListProcessedMedia() ([]ProcessedMedia, error) {
-	rows, err := r.db.Query("SELECT id, media_type, file_path, extracted_text, sender_phone, status, error_message, created_at FROM processed_media ORDER BY id DESC")
+	query := `
+		SELECT pm.id, pm.media_type, pm.file_path, pm.extracted_text, pm.sender_phone, pm.status, pm.error_message, pm.created_at, ap.description 
+		FROM processed_media pm
+		LEFT JOIN allowed_phones ap ON pm.sender_phone = ap.phone_number
+		ORDER BY pm.id DESC
+	`
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list processed media: %w", err)
 	}
@@ -82,7 +88,8 @@ func (r *Repository) ListProcessedMedia() ([]ProcessedMedia, error) {
 		var m ProcessedMedia
 		var errMsg sql.NullString
 		var extText sql.NullString
-		if err := rows.Scan(&m.ID, &m.MediaType, &m.FilePath, &extText, &m.SenderPhone, &m.Status, &errMsg, &m.CreatedAt); err != nil {
+		var name sql.NullString
+		if err := rows.Scan(&m.ID, &m.MediaType, &m.FilePath, &extText, &m.SenderPhone, &m.Status, &errMsg, &m.CreatedAt, &name); err != nil {
 			return nil, err
 		}
 		if errMsg.Valid {
@@ -90,6 +97,9 @@ func (r *Repository) ListProcessedMedia() ([]ProcessedMedia, error) {
 		}
 		if extText.Valid {
 			m.ExtractedText = extText.String
+		}
+		if name.Valid {
+			m.SenderName = name.String
 		}
 		media = append(media, m)
 	}

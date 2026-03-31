@@ -166,7 +166,7 @@
     <div class="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50/50 group">
         <div class="flex flex-col">
             <span class="text-sm font-semibold text-zinc-900">{{.PhoneNumber}}</span>
-            <span class="text-xs text-zinc-500">{{if .PushName}}{{.PushName}}{{else}}Unknown{{end}} &bull; {{.LastAttempt.Format "01/02 15:04"}}</span>
+            <span class="text-xs text-zinc-500">{{if .PushName}}{{.PushName}}{{else}}Unknown{{end}} &bull; {{.LastAttempt.Format "02/01/2006 as 15:04"}}</span>
         </div>
         <div class="flex items-center space-x-1">
             <button hx-get="/unauthorized/authorize?phone={{.PhoneNumber}}&name={{.PushName}}" hx-target="#unauthorized-list" hx-swap="innerHTML" class="inline-flex items-center justify-center p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50 transition-colors" title="Authorize">
@@ -217,7 +217,7 @@
 					<span class="inline-flex items-center rounded-md border border-transparent bg-zinc-900 text-zinc-50 px-2.5 py-0.5 text-xs font-semibold">Completed</span>
 				{{end}}
 			</div>
-            <span class="text-xs text-zinc-500 font-medium">From: {{.SenderPhone}} &bull; {{.CreatedAt.Format "01/02 at 15:04"}}</span>
+            <span class="text-xs text-zinc-500 font-medium">De: {{if .SenderName}}{{.SenderName}}{{else}}{{.SenderPhone}}{{end}} &bull; {{.CreatedAt.Format "02/01/2006 as 15:04"}}</span>
         </div>
 		<div class="flex items-center space-x-3">
 			<button hx-delete="/media/delete?id={{.ID}}" hx-target="#media-list" hx-confirm="Delete this file and record permanently?" title="Delete" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-zinc-200 hover:text-red-600 h-8 w-8 text-zinc-400 opacity-0 group-hover:opacity-100">

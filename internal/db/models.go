@@ -17,6 +17,7 @@ type ProcessedMedia struct {
 	FilePath      string
 	ExtractedText string
 	SenderPhone   string
+	SenderName    string
 	Status        string
 	ErrorMessage  string
 	CreatedAt     time.Time
