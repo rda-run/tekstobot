@@ -1,4 +1,6 @@
 # TekstoBot 🤖
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frda-run%2Ftekstobot.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Frda-run%2Ftekstobot?ref=badge_shield)
+
 
 **TekstoBot** is a WhatsApp processing service that utilizes local Artificial
 Intelligence to automatically transcribe speech to text (**STT**).
@@ -170,3 +172,6 @@ sudo journalctl -u tekstobot -f
 
 This project is under the MIT license. See the [LICENSE](LICENSE) file for
 details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frda-run%2Ftekstobot.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Frda-run%2Ftekstobot?ref=badge_large)
