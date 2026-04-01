@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -11,9 +12,10 @@ type Config struct {
 	DBPort     string
 	DBUser     string
 	DBPassword string
-	DBName     string
-	WhisperURL string
-	Port       string
+	DBName                string
+	WhisperURL            string
+	WhisperHealthInterval int
+	Port                  string
 }
 
 func Load() *Config {
@@ -27,9 +29,10 @@ func Load() *Config {
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBUser:     getEnv("DB_USER", "postgres"),
 		DBPassword: getEnv("DB_PASSWORD", "postgres"),
-		DBName:     getEnv("DB_NAME", "tekstobot"),
-		WhisperURL: getEnv("WHISPER_URL", "http://localhost:8000"),
-		Port:       getEnv("PORT", "8080"),
+		DBName:                getEnv("DB_NAME", "tekstobot"),
+		WhisperURL:            getEnv("WHISPER_URL", "http://localhost:8000"),
+		WhisperHealthInterval: getEnvAsInt("WHISPER_HEALTH_INTERVAL", 30),
+		Port:                  getEnv("PORT", "8080"),
 	}
 
 	return cfg
@@ -38,6 +41,16 @@ func Load() *Config {
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return fallback
+}
+
+func getEnvAsInt(key string, fallback int) int {
+	if valueStr, exists := os.LookupEnv(key); exists {
+		var value int
+		if _, err := fmt.Sscanf(valueStr, "%d", &value); err == nil {
+			return value
+		}
 	}
 	return fallback
 }
