@@ -257,6 +257,6 @@
 </div>
 {{end}}
 {{if .HasPending}}
-<div id="media-list" hx-get="/media" hx-trigger="every 5s" hx-swap-oob="true"></div>
+<div hx-get="/media" hx-trigger="every 5s" hx-target="#media-list" hx-swap="innerHTML" class="hidden"></div>
 {{end}}
 {{end}}
