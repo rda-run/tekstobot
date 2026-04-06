@@ -205,13 +205,18 @@
 {{end}}
 
 {{define "media_list.html"}}
-{{range .}}
-<details class="group rounded-lg border border-zinc-200 bg-white text-zinc-950 shadow-sm relative [&_summary::-webkit-details-marker]:hidden">
+{{range .Items}}
+<details class="group rounded-lg border {{if eq .Status "pending"}}border-amber-300 bg-amber-50/30{{else}}border-zinc-200 bg-white{{end}} text-zinc-950 shadow-sm relative [&_summary::-webkit-details-marker]:hidden">
     <summary class="flex justify-between items-center cursor-pointer p-4 select-none hover:bg-zinc-50/50 rounded-lg transition-colors">
         <div class="flex flex-col space-y-1.5">
 			<div class="flex items-center space-x-2">
 				<span class="inline-flex items-center rounded-md border border-zinc-200 px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2">{{.MediaType}}</span>
-				{{if eq .Status "error"}}
+				{{if eq .Status "pending"}}
+					<span class="inline-flex items-center rounded-md border border-transparent bg-amber-500/15 text-amber-600 px-2.5 py-0.5 text-xs font-semibold">
+						<span class="mr-1.5 flex h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+						Pending
+					</span>
+				{{else if eq .Status "error"}}
 					<span class="inline-flex items-center rounded-md border border-transparent bg-rose-500/10 text-rose-500 px-2.5 py-0.5 text-xs font-semibold">Error</span>
 				{{else}}
 					<span class="inline-flex items-center rounded-md border border-transparent bg-zinc-900 text-zinc-50 px-2.5 py-0.5 text-xs font-semibold">Completed</span>
@@ -227,14 +232,21 @@
 		</div>
     </summary>
 
-	<div class="p-4 pt-2 border-t border-zinc-100 bg-zinc-50/30 rounded-b-lg">
+	<div class="p-4 pt-2 border-t {{if eq .Status "pending"}}border-amber-200{{else}}border-zinc-100{{end}} bg-zinc-50/30 rounded-b-lg">
 		{{if eq .MediaType "audio"}}
 			<audio controls class="w-full h-10 mb-4 rounded-md outline-none border border-zinc-200 shadow-sm bg-white">
 				<source src="/{{.FilePath}}" type="audio/ogg">
 			</audio>
 		{{end}}
 		
+		{{if eq .Status "pending"}}
+		<div class="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700 font-medium flex items-center space-x-2">
+			<svg class="animate-spin h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+			<span>Awaiting transcription...</span>
+		</div>
+		{{else}}
 		<div class="rounded-md bg-white border border-zinc-200 px-4 py-3 text-sm text-zinc-800 font-mono break-words whitespace-pre-wrap shadow-sm">{{if .ExtractedText}}{{.ExtractedText}}{{else if .ErrorMessage}}{{.ErrorMessage}}{{else}}Processing...{{end}}</div>
+		{{end}}
 	</div>
 </details>
 {{else}}
@@ -243,5 +255,8 @@
 	<p class="text-sm font-medium text-zinc-900">No Media</p>
 	<p class="text-sm text-zinc-500 mt-1">Processed media will automatically appear here.</p>
 </div>
+{{end}}
+{{if .HasPending}}
+<div id="media-list" hx-get="/media" hx-trigger="every 5s" hx-swap-oob="true"></div>
 {{end}}
 {{end}}

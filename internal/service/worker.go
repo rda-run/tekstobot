@@ -67,8 +67,7 @@ func (w *Worker) processMessage(msg *events.Message) {
 		AudioMessage: audioMsg,
 	}
 
-	var filePath, extractedText, errorMsg, status string
-	status = "completed"
+	var filePath string
 
 	// Notify user immediately that processing has started
 	w.replyText(job.Chat, job.MsgID, "⏳ *Processing...*")
@@ -91,7 +90,21 @@ func (w *Worker) processMessage(msg *events.Message) {
 		return
 	}
 
-	// 2. Transcribe
+	// 2. Save to database with "pending" status so it shows up in the UI immediately
+	mediaID, saveErr := w.Repo.SaveProcessedMedia(&db.ProcessedMedia{
+		MediaType:   job.MediaType,
+		FilePath:    filePath,
+		SenderPhone: job.SenderPhone,
+		Status:      "pending",
+	})
+	if saveErr != nil {
+		log.Printf("Failed to save media entry to db: %v", saveErr)
+	}
+
+	// 3. Transcribe
+	var extractedText, errorMsg, status string
+	status = "completed"
+
 	if job.MediaType == "audio" {
 		extractedText, err = w.WhisperClient.ProcessAudio(filePath)
 		if err != nil {
@@ -102,20 +115,14 @@ func (w *Worker) processMessage(msg *events.Message) {
 		}
 	}
 
-	// 3. Save to database
-	_, saveErr := w.Repo.SaveProcessedMedia(&db.ProcessedMedia{
-		MediaType:     job.MediaType,
-		FilePath:      filePath,
-		ExtractedText: extractedText,
-		SenderPhone:   job.SenderPhone,
-		Status:        status,
-		ErrorMessage:  errorMsg,
-	})
-	if saveErr != nil {
-		log.Printf("Failed to save media entry to db: %v", saveErr)
+	// 4. Update database record with result
+	if mediaID != 0 {
+		if updateErr := w.Repo.UpdateProcessedMedia(mediaID, extractedText, status, errorMsg); updateErr != nil {
+			log.Printf("Failed to update media entry in db: %v", updateErr)
+		}
 	}
 
-	// 4. Send successful reply
+	// 5. Send successful reply
 	if status == "completed" {
 		replyMsg := &waProto.Message{
 			ExtendedTextMessage: &waProto.ExtendedTextMessage{

@@ -107,6 +107,19 @@ func (r *Repository) ListProcessedMedia() ([]ProcessedMedia, error) {
 	return media, nil
 }
 
+func (r *Repository) UpdateProcessedMedia(id int, extractedText, status, errorMessage string) error {
+	query := `
+		UPDATE processed_media
+		SET extracted_text = $1, status = $2, error_message = $3
+		WHERE id = $4
+	`
+	_, err := r.db.Exec(query, extractedText, status, errorMessage, id)
+	if err != nil {
+		return fmt.Errorf("failed to update processed media: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) DeleteProcessedMedia(id int) (string, error) {
 	var filePath string
 	err := r.db.QueryRow("DELETE FROM processed_media WHERE id = $1 RETURNING file_path", id).Scan(&filePath)

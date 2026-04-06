@@ -121,7 +121,17 @@ func (s *Server) handleDeletePhone(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {
 	media, _ := s.Repo.ListProcessedMedia()
-	s.Tpl.ExecuteTemplate(w, "media_list.html", media)
+	hasPending := false
+	for _, m := range media {
+		if m.Status == "pending" {
+			hasPending = true
+			break
+		}
+	}
+	s.Tpl.ExecuteTemplate(w, "media_list.html", map[string]interface{}{
+		"Items":      media,
+		"HasPending": hasPending,
+	})
 }
 
 func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
