@@ -42,7 +42,7 @@ func main() {
 
 	// WhatsApp
 	dsn := db.GetDSN(cfg)
-	waClient, err := whatsapp.NewClient(repo, dsn)
+	waClient, err := whatsapp.NewClient(repo, dsn, cfg.AdminPhone)
 	if err != nil {
 		log.Fatalf("Failed to init WhatsApp client: %v", err)
 	}

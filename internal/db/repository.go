@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Repository struct {
@@ -115,7 +116,18 @@ func (r *Repository) DeleteProcessedMedia(id int) (string, error) {
 	return filePath, nil
 }
 
-func (r *Repository) SaveUnauthorizedAttempt(phone, name string) error {
+func (r *Repository) SaveUnauthorizedAttempt(phone, name string) (bool, error) {
+	var lastAttempt sql.NullTime
+	err := r.db.QueryRow("SELECT last_attempt FROM unauthorized_attempts WHERE phone_number = $1", phone).Scan(&lastAttempt)
+	if err != nil && err != sql.ErrNoRows {
+		return false, fmt.Errorf("failed to check last attempt: %w", err)
+	}
+
+	needsNotification := false
+	if !lastAttempt.Valid || time.Since(lastAttempt.Time) > 1*time.Hour {
+		needsNotification = true
+	}
+
 	query := `
 		INSERT INTO unauthorized_attempts (phone_number, push_name, last_attempt)
 		VALUES ($1, $2, NOW())
@@ -123,11 +135,11 @@ func (r *Repository) SaveUnauthorizedAttempt(phone, name string) error {
 			push_name = EXCLUDED.push_name,
 			last_attempt = EXCLUDED.last_attempt
 	`
-	_, err := r.db.Exec(query, phone, name)
+	_, err = r.db.Exec(query, phone, name)
 	if err != nil {
-		return fmt.Errorf("failed to save unauthorized attempt: %w", err)
+		return false, fmt.Errorf("failed to save unauthorized attempt: %w", err)
 	}
-	return nil
+	return needsNotification, nil
 }
 
 func (r *Repository) ListUnauthorizedAttempts() ([]UnauthorizedAttempt, error) {

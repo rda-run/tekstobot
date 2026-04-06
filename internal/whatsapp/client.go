@@ -7,22 +7,26 @@ import (
 	"sync"
 
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
+	"google.golang.org/protobuf/proto"
 
 	"tekstobot/internal/db"
 )
 
 type Client struct {
-	WAClient  *whatsmeow.Client
-	Repo      *db.Repository
-	MediaChan chan *events.Message
-	QRCode    string
-	QRLock    sync.RWMutex
+	WAClient   *whatsmeow.Client
+	Repo       *db.Repository
+	MediaChan  chan *events.Message
+	QRCode     string
+	QRLock     sync.RWMutex
+	AdminPhone string
 }
 
-func NewClient(repo *db.Repository, dsn string) (*Client, error) {
+func NewClient(repo *db.Repository, dsn string, adminPhone string) (*Client, error) {
 	dbLog := waLog.Stdout("Database", "WARN", true)
 	container, err := sqlstore.New(context.Background(), "postgres", dsn, dbLog)
 	if err != nil {
@@ -38,14 +42,33 @@ func NewClient(repo *db.Repository, dsn string) (*Client, error) {
 	waClient := whatsmeow.NewClient(deviceStore, clientLog)
 
 	c := &Client{
-		WAClient:  waClient,
-		Repo:      repo,
-		MediaChan: make(chan *events.Message, 100),
+		WAClient:   waClient,
+		Repo:       repo,
+		MediaChan:  make(chan *events.Message, 100),
+		AdminPhone: adminPhone,
 	}
 
 	waClient.AddEventHandler(c.eventHandler)
 
 	return c, nil
+}
+
+func (c *Client) SendMessage(phone string, text string) error {
+	recipient, err := types.ParseJID(phone + "@s.whatsapp.net")
+	if err != nil {
+		return fmt.Errorf("failed to parse recipient JID: %w", err)
+	}
+
+	msg := &waE2E.Message{
+		Conversation: proto.String(text),
+	}
+
+	_, err = c.WAClient.SendMessage(context.Background(), recipient, msg)
+	if err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Client) Start() error {
@@ -122,7 +145,22 @@ func (c *Client) handleMessage(msg *events.Message) {
 
 	if !allowed {
 		log.Printf("Message from non-whitelisted phone ignored: %s (Name: %s, Full JID: %s)", senderPhone, pushName, fullJID)
-		c.Repo.SaveUnauthorizedAttempt(senderPhone, pushName)
+		needsNotification, err := c.Repo.SaveUnauthorizedAttempt(senderPhone, pushName)
+		if err != nil {
+			log.Printf("Error saving unauthorized attempt: %v", err)
+			return
+		}
+
+		if needsNotification {
+			// Notify User
+			go c.SendMessage(senderPhone, "Olá! O seu acesso está pendente e será autorizado pela nossa equipe em breve.")
+
+			// Notify Admin
+			if c.AdminPhone != "" {
+				adminMsg := fmt.Sprintf("⚠️ Novo usuário aguardando autorização no TekstoBot: %s (%s). Acesse a dashboard para aprovar.", pushName, senderPhone)
+				go c.SendMessage(c.AdminPhone, adminMsg)
+			}
+		}
 		return
 	}
 

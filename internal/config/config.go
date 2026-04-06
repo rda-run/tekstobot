@@ -15,6 +15,7 @@ type Config struct {
 	DBName                string
 	WhisperURL            string
 	WhisperHealthInterval int
+	AdminPhone            string
 	Port                  string
 }
 
@@ -32,6 +33,7 @@ func Load() *Config {
 		DBName:                getEnv("DB_NAME", "tekstobot"),
 		WhisperURL:            getEnv("WHISPER_URL", "http://localhost:8000"),
 		WhisperHealthInterval: getEnvAsInt("WHISPER_HEALTH_INTERVAL", 30),
+		AdminPhone:            getEnv("ADMIN_PHONE", ""),
 		Port:                  getEnv("PORT", "8080"),
 	}
 

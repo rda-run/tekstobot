@@ -147,6 +147,7 @@ func (s *Server) handleAuthorizeUnauthorized(w http.ResponseWriter, r *http.Requ
 	if phone != "" {
 		s.Repo.AddAllowedPhone(phone, name)
 		s.Repo.DeleteUnauthorizedAttempt(phone)
+		go s.WA.SendMessage(phone, "Seu acesso no TekstoBot foi autorizado! 🎉\nPor favor, reenvie o seu áudio ou mensagem para que eu possa processar.")
 	}
 	// After authorizing, we want to refresh both lists or just the unauthorized one.
 	// Since HTMX usually targets one element, we'll return the updated unauthorized list,
