@@ -1,12 +1,13 @@
 # TekstoBot 🤖
 
-**TekstoBot** is a WhatsApp processing service that utilizes local Artificial
-Intelligence to automatically transcribe speech to text (**STT**).
+**TekstoBot** is a WhatsApp processing service that utilizes Artificial
+Intelligence to automatically transcribe speech to text (**STT**), with support
+for local Whisper servers and Cloudflare Workers AI.
 
 ## 🚀 Features
 
 - **Audio Transcription:** Receive voice messages and get the corresponding text
-  via Whisper.
+  via local Whisper or Cloudflare Workers AI (`whisper-large-v3-turbo`).
 - **Administrative Dashboard:** Web interface to manage authorized numbers, view
   history, and monitor connection status.
 - **Whitelist:** Only authorized numbers in the database can interact with the
@@ -21,7 +22,7 @@ Intelligence to automatically transcribe speech to text (**STT**).
 - **WhatsApp Integration:** [whatsmeow](https://github.com/tulir/whatsmeow)
 - **AI (STT):**
   [faster-whisper-server](https://github.com/fedirz/faster-whisper-server) (via
-  Podman/Docker)
+  Podman/Docker) or [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/)
 - **Frontend:** Go `html/template`, [HTMX](https://htmx.org/) and [Tailwind
   CSS](https://tailwindcss.com/)
 
@@ -29,8 +30,10 @@ Intelligence to automatically transcribe speech to text (**STT**).
 
 1. **Go 1.21+** installed.
 2. **PostgreSQL** running locally.
-3. **Podman** (or Docker) for the Whisper server.
+3. **Podman** (or Docker) for local Whisper server mode.
 4. **psql** (PostgreSQL client) to run migrations via Makefile.
+5. For Cloudflare mode: Cloudflare account with Workers AI enabled, account ID,
+   and API token.
 
 ### 🔧 Prepare GPU Acceleration (Additional for Podman on AlmaLinux/RHEL)
 
@@ -79,6 +82,35 @@ Podman using CDI mapping:
    go mod tidy
    ```
 
+### Transcription backend configuration
+
+TekstoBot supports two transcription backends:
+
+- `TRANSCRIBER_BACKEND=local` (default): uses `WHISPER_URL`.
+- `TRANSCRIBER_BACKEND=cloudflare`: uses Cloudflare Workers AI endpoint
+  `@cf/openai/whisper-large-v3-turbo`.
+
+Example local configuration:
+
+```bash
+TRANSCRIBER_BACKEND=local
+WHISPER_URL=http://localhost:8000
+WHISPER_HEALTH_INTERVAL=30
+```
+
+Example Cloudflare configuration:
+
+```bash
+TRANSCRIBER_BACKEND=cloudflare
+CLOUDFLARE_ACCOUNT_ID=<your-account-id>
+CLOUDFLARE_API_TOKEN=<your-api-token>
+# Optional ISO 639-1 language code. Leave empty for auto-detection.
+CLOUDFLARE_WHISPER_LANGUAGE=en
+```
+
+When Cloudflare backend is selected, `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN` are required and validated during startup.
+
 ## 🏃 How to Run
 
 The project uses a `Makefile` to simplify common commands:
@@ -89,7 +121,7 @@ The project uses a `Makefile` to simplify common commands:
    make migrate-up
    ```
 
-2. **Start Whisper (Audio AI):**
+2. **Start Whisper (Audio AI, local backend only):**
 
    ```bash
    make whisper
@@ -117,6 +149,36 @@ Run `make` to see the list of available commands:
 - `make migrate-up`: Run up migrations.
 - `make migrate-down`: Rollback migrations.
 - `make check`: Run build and import checks.
+
+## Cloudflare backend notes
+
+- Endpoint used by TekstoBot:
+  `POST /client/v4/accounts/{ACCOUNT_ID}/ai/run/@cf/openai/whisper-large-v3-turbo`
+- Authentication: `Authorization: Bearer <CLOUDFLARE_API_TOKEN>`
+- Input format: base64-encoded audio bytes.
+
+### Limits and quotas
+
+Cloudflare Workers AI limits and pricing are managed by Cloudflare and can
+change over time. At the time of writing:
+
+- Automatic Speech Recognition default rate limit: 720 requests/minute.
+- `whisper-large-v3-turbo` pricing is charged by audio minute.
+
+Always verify the latest values in Cloudflare docs:
+
+- [Workers AI limits](https://developers.cloudflare.com/workers-ai/platform/limits)
+- [whisper-large-v3-turbo model page](https://developers.cloudflare.com/workers-ai/models/whisper-large-v3-turbo/)
+
+### Troubleshooting (Cloudflare mode)
+
+- **Startup fails with missing Cloudflare credentials:** set
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+- **401/403 errors:** verify token validity, scopes, and account ID.
+- **429 errors / throttling:** request rate exceeded; apply retry/backoff in
+  your deployment workflow and monitor usage.
+- **Transcription errors in UI:** detailed backend errors are stored and shown in
+  media history to aid diagnosis.
 
 ## 📦 Production Deployment (RPM + Quadlets)
 
@@ -152,19 +214,29 @@ The RPM post-install script detects if NVIDIA support is present on the host.
 
 ### 4. Service Initialization
 
-Services are managed by systemd:
+Services are managed by systemd. On each `start` or `restart` of `tekstobot`, systemd
+reads `TRANSCRIBER_BACKEND` from `/etc/tekstobot.env` and either starts the local
+Whisper Quadlet (`local`) or stops it (`cloudflare`) so you do not need a separate
+sync step.
 
 ```bash
 # Configure your .env (required before starting)
 sudo cp /etc/tekstobot.env.example /etc/tekstobot.env
 sudo vi /etc/tekstobot.env
 
-# Start the services (the bot will automatically start Whisper if needed)
+# Enable and start TekstoBot
 sudo systemctl enable --now tekstobot
 
 # Follow the logs
 sudo journalctl -u tekstobot -f
 ```
+
+- **`TRANSCRIBER_BACKEND=local`:** the Podman Whisper service is started before the bot.
+- **`TRANSCRIBER_BACKEND=cloudflare`:** the local Whisper service is stopped and not
+  used; configure Cloudflare credentials in the same file.
+
+After changing `TRANSCRIBER_BACKEND` (or other settings), run
+`sudo systemctl restart tekstobot` to apply them.
 
 ## 📄 License
 

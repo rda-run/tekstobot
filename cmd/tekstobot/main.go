@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"tekstobot/internal/ai"
@@ -37,8 +39,29 @@ func main() {
 
 	repo := db.NewRepository(dbConn)
 
-	// AI Clients
-	whisperClient := ai.NewWhisperClient(cfg)
+	// AI Transcriber backend
+	var transcriber ai.Transcriber
+	switch strings.ToLower(strings.TrimSpace(cfg.TranscriberBackend)) {
+	case "", "local":
+		transcriber = ai.NewWhisperClient(cfg)
+	case "cloudflare":
+		if strings.TrimSpace(cfg.CloudflareAccountID) == "" {
+			log.Fatal("CLOUDFLARE_ACCOUNT_ID is required when TRANSCRIBER_BACKEND=cloudflare")
+		}
+		if strings.TrimSpace(cfg.CloudflareAPIToken) == "" {
+			log.Fatal("CLOUDFLARE_API_TOKEN is required when TRANSCRIBER_BACKEND=cloudflare")
+		}
+		transcriber = ai.NewCloudflareClient(
+			cfg.CloudflareAccountID,
+			cfg.CloudflareAPIToken,
+			cfg.CloudflareLanguage,
+		)
+	default:
+		log.Fatalf(
+			"invalid TRANSCRIBER_BACKEND value %q (supported: local, cloudflare)",
+			fmt.Sprintf("%s", cfg.TranscriberBackend),
+		)
+	}
 
 	// WhatsApp
 	dsn := db.GetDSN(cfg)
@@ -47,7 +70,7 @@ func main() {
 		log.Fatalf("Failed to init WhatsApp client: %v", err)
 	}
 
-	worker := service.NewWorker(repo, whisperClient, waClient.WAClient)
+	worker := service.NewWorker(repo, transcriber, waClient.WAClient)
 
 	// UI Server
 	uiServer := ui.NewServer(repo, waClient, Version, migrationErrStr)

@@ -12,11 +12,18 @@ type Config struct {
 	DBPort     string
 	DBUser     string
 	DBPassword string
-	DBName                string
+	DBName     string
+
+	TranscriberBackend    string
 	WhisperURL            string
 	WhisperHealthInterval int
-	AdminPhone            string
-	Port                  string
+
+	CloudflareAccountID string
+	CloudflareAPIToken  string
+	CloudflareLanguage  string
+
+	AdminPhone string
+	Port       string
 }
 
 func Load() *Config {
@@ -26,13 +33,17 @@ func Load() *Config {
 	godotenv.Load("/etc/tekstobot.env")
 
 	cfg := &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "postgres"),
+		DBHost:                getEnv("DB_HOST", "localhost"),
+		DBPort:                getEnv("DB_PORT", "5432"),
+		DBUser:                getEnv("DB_USER", "postgres"),
+		DBPassword:            getEnv("DB_PASSWORD", "postgres"),
 		DBName:                getEnv("DB_NAME", "tekstobot"),
+		TranscriberBackend:    getEnv("TRANSCRIBER_BACKEND", "local"),
 		WhisperURL:            getEnv("WHISPER_URL", "http://localhost:8000"),
 		WhisperHealthInterval: getEnvAsInt("WHISPER_HEALTH_INTERVAL", 30),
+		CloudflareAccountID:   getEnv("CLOUDFLARE_ACCOUNT_ID", ""),
+		CloudflareAPIToken:    getEnv("CLOUDFLARE_API_TOKEN", ""),
+		CloudflareLanguage:    getEnv("CLOUDFLARE_WHISPER_LANGUAGE", ""),
 		AdminPhone:            getEnv("ADMIN_PHONE", ""),
 		Port:                  getEnv("PORT", "8080"),
 	}

@@ -36,6 +36,12 @@ contents:
   - src: "deploy/tekstobot.service"
     dst: "/usr/lib/systemd/system/tekstobot.service"
 
+  - src: "scripts/tekstobot-whisper-prestart.sh"
+    dst: "/usr/libexec/tekstobot/tekstobot-whisper-prestart.sh"
+    type: "file"
+    file_info:
+      mode: 0755
+
   # Persistent data directories setup (as empty files/dirs is tricky in nfpm, 
   # but we can ensure they are there via postinstall)
 

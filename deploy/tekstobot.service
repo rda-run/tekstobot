@@ -1,12 +1,12 @@
 [Unit]
 Description=TekstoBot Service - WhatsApp Audio Transcription Bot
-After=network.target whisper.service
-Requires=whisper.service
+After=network.target
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/var/lib/tekstobot
+ExecStartPre=/usr/libexec/tekstobot/tekstobot-whisper-prestart.sh
 ExecStart=/usr/bin/tekstobot
 Restart=always
 RestartSec=10

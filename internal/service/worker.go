@@ -19,16 +19,16 @@ import (
 )
 
 type Worker struct {
-	Repo          *db.Repository
-	WhisperClient *ai.WhisperClient
-	WAClient      *whatsmeow.Client
+	Repo        *db.Repository
+	Transcriber ai.Transcriber
+	WAClient    *whatsmeow.Client
 }
 
-func NewWorker(repo *db.Repository, whisper *ai.WhisperClient, wa *whatsmeow.Client) *Worker {
+func NewWorker(repo *db.Repository, transcriber ai.Transcriber, wa *whatsmeow.Client) *Worker {
 	return &Worker{
-		Repo:          repo,
-		WhisperClient: whisper,
-		WAClient:      wa,
+		Repo:        repo,
+		Transcriber: transcriber,
+		WAClient:    wa,
 	}
 }
 
@@ -48,7 +48,7 @@ func (w *Worker) Start(mediaChan <-chan *events.Message) {
 
 func (w *Worker) processMessage(msg *events.Message) {
 	senderPhone := msg.Info.Sender.User
-	
+
 	var mediaType string
 	var audioMsg *waProto.AudioMessage
 
@@ -106,7 +106,7 @@ func (w *Worker) processMessage(msg *events.Message) {
 	status = "completed"
 
 	if job.MediaType == "audio" {
-		extractedText, err = w.WhisperClient.ProcessAudio(filePath)
+		extractedText, err = w.Transcriber.ProcessAudio(filePath)
 		if err != nil {
 			status = "error"
 			errorMsg = err.Error()
@@ -128,7 +128,7 @@ func (w *Worker) processMessage(msg *events.Message) {
 			ExtendedTextMessage: &waProto.ExtendedTextMessage{
 				Text: proto.String(fmt.Sprintf("📝 *Transcription:*\n\n%s", extractedText)),
 				ContextInfo: &waProto.ContextInfo{
-					StanzaID: proto.String(job.MsgID),
+					StanzaID:    proto.String(job.MsgID),
 					Participant: proto.String(job.Chat.String()),
 				},
 			},
@@ -145,7 +145,7 @@ func (w *Worker) replyError(chat types.JID, msgID string, text string) {
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{
 			Text: proto.String(fmt.Sprintf("❌ Error: %s", text)),
 			ContextInfo: &waProto.ContextInfo{
-				StanzaID: proto.String(msgID),
+				StanzaID:    proto.String(msgID),
 				Participant: proto.String(chat.String()),
 			},
 		},
@@ -158,7 +158,7 @@ func (w *Worker) replyText(chat types.JID, msgID string, text string) {
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{
 			Text: proto.String(text),
 			ContextInfo: &waProto.ContextInfo{
-				StanzaID: proto.String(msgID),
+				StanzaID:    proto.String(msgID),
 				Participant: proto.String(chat.String()),
 			},
 		},
