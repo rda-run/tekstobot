@@ -143,7 +143,7 @@ func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 			os.Remove(filePath)
 		}
 	}
-	s.handleMedia(w, r)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (s *Server) handleListUnauthorized(w http.ResponseWriter, r *http.Request) {
