@@ -7,8 +7,10 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"tekstobot/internal/ai"
+	"tekstobot/internal/auth"
 	"tekstobot/internal/config"
 	"tekstobot/internal/db"
 	"tekstobot/internal/service"
@@ -63,6 +65,28 @@ func main() {
 		)
 	}
 
+	// OIDC Authentication (optional)
+	var authHandler *auth.Auth
+	if cfg.OIDCEnabled {
+		if cfg.OIDCIssuerURL == "" || cfg.OIDCClientID == "" || cfg.OIDCClientSecret == "" {
+			log.Fatal("OIDC_ENABLED=true requires OIDC_ISSUER_URL, OIDC_CLIENT_ID, and OIDC_CLIENT_SECRET")
+		}
+		authHandler, err = auth.New(cfg, dbConn)
+		if err != nil {
+			log.Fatalf("Failed to initialize OIDC: %v", err)
+		}
+		log.Printf("OIDC authentication enabled (issuer: %s)", cfg.OIDCIssuerURL)
+
+		// Periodic cleanup of expired sessions
+		go func() {
+			ticker := time.NewTicker(1 * time.Hour)
+			defer ticker.Stop()
+			for range ticker.C {
+				authHandler.CleanExpiredSessions()
+			}
+		}()
+	}
+
 	// WhatsApp
 	dsn := db.GetDSN(cfg)
 	waClient, err := whatsapp.NewClient(repo, dsn, cfg.AdminPhone)
@@ -73,7 +97,7 @@ func main() {
 	worker := service.NewWorker(repo, transcriber, waClient.WAClient)
 
 	// UI Server
-	uiServer := ui.NewServer(repo, waClient, Version, migrationErrStr)
+	uiServer := ui.NewServer(repo, waClient, Version, migrationErrStr, authHandler)
 
 	// Start modules only if NO migration error
 	if migrationErrStr == "" {

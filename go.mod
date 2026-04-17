@@ -3,11 +3,13 @@ module tekstobot
 go 1.26.1
 
 require (
+	github.com/coreos/go-oidc/v3 v3.18.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	go.mau.fi/whatsmeow v0.0.0-20260327181659-02ec817e7cf4
+	golang.org/x/oauth2 v0.36.0
 	google.golang.org/protobuf v1.36.11
 )
 
@@ -16,6 +18,7 @@ require (
 	github.com/beeper/argo-go v1.1.2 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/elliotchance/orderedmap/v3 v3.1.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

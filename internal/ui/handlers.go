@@ -11,6 +11,7 @@ import (
 
 	"github.com/skip2/go-qrcode"
 
+	"tekstobot/internal/auth"
 	"tekstobot/internal/db"
 	"tekstobot/internal/whatsapp"
 )
@@ -24,9 +25,10 @@ type Server struct {
 	Tpl            *template.Template
 	Version        string
 	MigrationError string
+	Auth           *auth.Auth // nil when OIDC is disabled
 }
 
-func NewServer(repo *db.Repository, wa *whatsapp.Client, version string, migrationError string) *Server {
+func NewServer(repo *db.Repository, wa *whatsapp.Client, version string, migrationError string, authHandler *auth.Auth) *Server {
 	tpl := template.Must(template.ParseFS(templatesFS, "templates/*.html"))
 	return &Server{
 		Repo:           repo,
@@ -34,38 +36,63 @@ func NewServer(repo *db.Repository, wa *whatsapp.Client, version string, migrati
 		Tpl:            tpl,
 		Version:        version,
 		MigrationError: migrationError,
+		Auth:           authHandler,
 	}
 }
 
 func (s *Server) Start(port string) error {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", s.handleDashboard)
+	// protect wraps a handler with auth middleware when OIDC is enabled.
+	protect := func(handler http.HandlerFunc) http.HandlerFunc {
+		if s.Auth != nil {
+			return s.Auth.RequireAuth(handler)
+		}
+		return handler
+	}
 
-	mux.HandleFunc("/status", s.handleStatus)
-	mux.HandleFunc("/qr.png", s.handleQR)
+	// Auth routes (always public)
+	if s.Auth != nil {
+		mux.HandleFunc("/auth/login", s.Auth.HandleLogin)
+		mux.HandleFunc("/auth/callback", s.Auth.HandleCallback)
+		mux.HandleFunc("/auth/logout", s.Auth.HandleLogout)
+	}
 
-	mux.HandleFunc("/phones", s.handlePhones)
-	mux.HandleFunc("/phones/add", s.handleAddPhone)
-	mux.HandleFunc("/phones/delete", s.handleDeletePhone)
+	// Protected routes
+	mux.HandleFunc("/", protect(s.handleDashboard))
+	mux.HandleFunc("/status", protect(s.handleStatus))
+	mux.HandleFunc("/qr.png", protect(s.handleQR))
+	mux.HandleFunc("/phones", protect(s.handlePhones))
+	mux.HandleFunc("/phones/add", protect(s.handleAddPhone))
+	mux.HandleFunc("/phones/delete", protect(s.handleDeletePhone))
+	mux.HandleFunc("/media", protect(s.handleMedia))
+	mux.HandleFunc("/media/delete", protect(s.handleDeleteMedia))
+	mux.HandleFunc("/unauthorized", protect(s.handleListUnauthorized))
+	mux.HandleFunc("/unauthorized/authorize", protect(s.handleAuthorizeUnauthorized))
+	mux.HandleFunc("/unauthorized/delete", protect(s.handleDeleteUnauthorized))
 
-	mux.HandleFunc("/media", s.handleMedia)
-	mux.HandleFunc("/media/delete", s.handleDeleteMedia)
-
-	mux.HandleFunc("/unauthorized", s.handleListUnauthorized)
-	mux.HandleFunc("/unauthorized/authorize", s.handleAuthorizeUnauthorized)
-	mux.HandleFunc("/unauthorized/delete", s.handleDeleteUnauthorized)
-
-	mux.Handle("/data/media/", http.StripPrefix("/data/media/", http.FileServer(http.Dir("data/media"))))
+	// Media file server (protected when OIDC is enabled)
+	mediaFS := http.StripPrefix("/data/media/", http.FileServer(http.Dir("data/media")))
+	if s.Auth != nil {
+		mux.Handle("/data/media/", s.Auth.RequireAuthHandler(mediaFS))
+	} else {
+		mux.Handle("/data/media/", mediaFS)
+	}
 
 	log.Printf("Starting UI Server on port %s", port)
 	return http.ListenAndServe(":"+port, mux)
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	var userName string
+	if session := auth.SessionFromContext(r.Context()); session != nil {
+		userName = session.DisplayName
+	}
 	s.Tpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 		"Version":        s.Version,
 		"MigrationError": s.MigrationError,
+		"UserName":       userName,
+		"AuthEnabled":    s.Auth != nil,
 	})
 }
 
@@ -73,9 +100,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	connected := s.WA.WAClient.IsLoggedIn() && s.WA.WAClient.IsConnected()
 	attempts, _ := s.Repo.ListUnauthorizedAttempts()
 	s.Tpl.ExecuteTemplate(w, "status.html", map[string]interface{}{
-		"Connected":     connected,
-		"HasQR":         s.WA.GetQR() != "",
-		"Time":          time.Now().Unix(),
+		"Connected":    connected,
+		"HasQR":        s.WA.GetQR() != "",
+		"Time":         time.Now().Unix(),
 		"PendingCount": len(attempts),
 		"Attempts":     attempts,
 	})

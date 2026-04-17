@@ -24,6 +24,14 @@ type Config struct {
 
 	AdminPhone string
 	Port       string
+
+	// OIDC Authentication
+	OIDCEnabled      bool
+	OIDCIssuerURL    string
+	OIDCClientID     string
+	OIDCClientSecret string
+	OIDCRedirectURL  string
+	OIDCSessionTTL   int // hours
 }
 
 func Load() *Config {
@@ -46,6 +54,12 @@ func Load() *Config {
 		CloudflareLanguage:    getEnv("CLOUDFLARE_WHISPER_LANGUAGE", ""),
 		AdminPhone:            getEnv("ADMIN_PHONE", ""),
 		Port:                  getEnv("PORT", "8080"),
+		OIDCEnabled:           getEnv("OIDC_ENABLED", "false") == "true",
+		OIDCIssuerURL:         getEnv("OIDC_ISSUER_URL", ""),
+		OIDCClientID:          getEnv("OIDC_CLIENT_ID", ""),
+		OIDCClientSecret:      getEnv("OIDC_CLIENT_SECRET", ""),
+		OIDCRedirectURL:       getEnv("OIDC_REDIRECT_URL", "http://localhost:8080/auth/callback"),
+		OIDCSessionTTL:        getEnvAsInt("OIDC_SESSION_TTL", 24),
 	}
 
 	return cfg

@@ -149,8 +149,19 @@
 						0
 					</div>
 				</button>
+				<div id="status-container" hx-get="/status" hx-trigger="load, every 5s" class="flex items-center">
+                    <span class="text-xs text-[var(--teksto-text-secondary)] italic">Loading status...</span>
+                </div>
             </div>
             <div class="flex items-center space-x-3">
+                {{if .AuthEnabled}}
+                <div class="flex items-center space-x-2 border-r border-[var(--teksto-border)] pr-3">
+                    <span class="text-xs text-[var(--teksto-text-secondary)] font-medium truncate max-w-[120px]">{{.UserName}}</span>
+                    <a href="/auth/logout" class="inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all border border-[var(--teksto-border)] bg-[var(--teksto-bg-card)] shadow-sm hover:border-rose-500/50 hover:text-rose-500 h-9 w-9 text-[var(--teksto-text-primary)]" title="Logout">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                    </a>
+                </div>
+                {{end}}
                 <!-- Theme Toggle Button -->
                 <button onclick="toggleTheme()" class="inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7c6f]/50 border border-[var(--teksto-border)] bg-[var(--teksto-bg-card)] shadow-sm hover:border-[#0d7c6f]/50 h-9 w-9 text-[var(--teksto-text-primary)]" title="Toggle theme">
                     <!-- Sun icon (shown in dark mode) -->
@@ -158,9 +169,6 @@
                     <!-- Moon icon (shown in light mode) -->
                     <svg class="block dark:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                 </button>
-                <div id="status-container" hx-get="/status" hx-trigger="load, every 5s" class="flex items-center">
-                    <span class="text-xs text-[var(--teksto-text-secondary)] italic">Loading status...</span>
-                </div>
             </div>
         </div>
     </header>
