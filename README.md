@@ -130,9 +130,9 @@ routes and media files require a valid session.
 
 To use [Pocket ID](https://pocket-id.org/) as your provider:
 
-1.  In Pocket ID Admin, create a new client.
-2.  Set the **Redirect URL** to your TekstoBot callback address.
-3.  Add the following to your `.env`:
+1. In Pocket ID Admin, create a new client.
+2. Set the **Redirect URL** to your TekstoBot callback address.
+3. Add the following to your `.env`:
 
 ```env
 OIDC_ENABLED=true
