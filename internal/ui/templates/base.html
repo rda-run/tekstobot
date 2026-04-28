@@ -178,8 +178,14 @@
 			<div class="space-y-6">
 				<div class="flex items-center justify-between">
 					<h2 class="text-2xl font-bold tracking-tight text-[var(--teksto-text-primary)]">Processing History</h2>
+					<select id="user-filter" name="phone" hx-get="/media" hx-target="#media-list" hx-swap="innerHTML" class="h-9 rounded-xl border border-[var(--teksto-border)] bg-[var(--teksto-bg-card)] px-3 text-sm text-[var(--teksto-text-primary)] shadow-sm focus:outline-none focus:border-[#0d7c6f] focus:ring-2 focus:ring-[#0d7c6f]/20 transition-all font-jetbrains">
+						<option value="">All Users</option>
+						{{range .MediaUsers}}
+						<option value="{{.PhoneNumber}}">{{if .Name}}{{.Name}}{{else}}{{.PhoneNumber}}{{end}}</option>
+						{{end}}
+					</select>
 				</div>
-				<div id="media-list" hx-get="/media" hx-trigger="load, access-updated from:body" hx-swap="morph" class="space-y-4">
+				<div id="media-list" hx-get="/media" hx-include="#user-filter" hx-trigger="load, access-updated from:body" hx-swap="innerHTML" class="space-y-4">
 					<!-- Loaded via htmx -->
 					<div class="flex justify-center py-12">
 						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d7c6f]"></div>
@@ -376,6 +382,6 @@
 </div>
 {{end}}
 {{if .HasPending}}
-<div id="media-refresh-trigger" hx-get="/media" hx-trigger="every 5s" hx-target="#media-list" hx-swap="morph" class="hidden"></div>
+<div id="media-refresh-trigger" hx-get="/media" hx-include="#user-filter" hx-trigger="every 5s" hx-target="#media-list" hx-swap="innerHTML" class="hidden"></div>
 {{end}}
 {{end}}

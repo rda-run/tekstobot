@@ -88,11 +88,13 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if session := auth.SessionFromContext(r.Context()); session != nil {
 		userName = session.DisplayName
 	}
+	mediaUsers, _ := s.Repo.ListMediaUsers()
 	s.Tpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
 		"Version":        s.Version,
 		"MigrationError": s.MigrationError,
 		"UserName":       userName,
 		"AuthEnabled":    s.Auth != nil,
+		"MediaUsers":     mediaUsers,
 	})
 }
 
@@ -147,7 +149,8 @@ func (s *Server) handleDeletePhone(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {
-	media, _ := s.Repo.ListProcessedMedia()
+	phoneFilter := r.URL.Query().Get("phone")
+	media, _ := s.Repo.ListProcessedMedia(phoneFilter)
 	hasPending := false
 	for _, m := range media {
 		if m.Status == "pending" {

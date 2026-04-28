@@ -29,3 +29,8 @@ type UnauthorizedAttempt struct {
 	PushName    string
 	LastAttempt time.Time
 }
+
+type MediaUser struct {
+	PhoneNumber string
+	Name        string
+}

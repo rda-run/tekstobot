@@ -71,14 +71,20 @@ func (r *Repository) DeleteAllowedPhone(id int) error {
 	return nil
 }
 
-func (r *Repository) ListProcessedMedia() ([]ProcessedMedia, error) {
+func (r *Repository) ListProcessedMedia(phoneFilter string) ([]ProcessedMedia, error) {
 	query := `
 		SELECT pm.id, pm.media_type, pm.file_path, pm.extracted_text, pm.sender_phone, pm.status, pm.error_message, pm.created_at, ap.description 
 		FROM processed_media pm
 		LEFT JOIN allowed_phones ap ON pm.sender_phone = ap.phone_number
-		ORDER BY pm.id DESC
 	`
-	rows, err := r.db.Query(query)
+	var args []interface{}
+	if phoneFilter != "" {
+		query += " WHERE pm.sender_phone = $1"
+		args = append(args, phoneFilter)
+	}
+	query += " ORDER BY pm.id DESC"
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list processed media: %w", err)
 	}
@@ -183,4 +189,32 @@ func (r *Repository) DeleteUnauthorizedAttempt(phone string) error {
 		return fmt.Errorf("failed to delete unauthorized attempt: %w", err)
 	}
 	return nil
+}
+
+func (r *Repository) ListMediaUsers() ([]MediaUser, error) {
+	query := `
+		SELECT DISTINCT pm.sender_phone, ap.description 
+		FROM processed_media pm
+		LEFT JOIN allowed_phones ap ON pm.sender_phone = ap.phone_number
+		ORDER BY ap.description, pm.sender_phone
+	`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list media users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []MediaUser
+	for rows.Next() {
+		var u MediaUser
+		var name sql.NullString
+		if err := rows.Scan(&u.PhoneNumber, &name); err != nil {
+			return nil, err
+		}
+		if name.Valid {
+			u.Name = name.String
+		}
+		users = append(users, u)
+	}
+	return users, nil
 }
