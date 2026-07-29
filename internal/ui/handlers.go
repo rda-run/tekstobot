@@ -101,13 +101,12 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	attempts, _ := s.Repo.ListUnauthorizedAttempts()
-	pendingCount, _ := s.Repo.GetPendingAttemptsCount()
 	s.Tpl.ExecuteTemplate(w, "status.html", map[string]interface{}{
 		"Connected":    s.WA.WAClient.IsConnected() && s.WA.WAClient.IsLoggedIn(),
 		"HasQR":        s.WA.GetQR() != "",
 		"Time":         time.Now().Unix(),
 		"Attempts":     attempts,
-		"PendingCount": pendingCount,
+		"PendingCount": len(attempts),
 	})
 }
 

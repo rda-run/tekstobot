@@ -116,7 +116,7 @@ func (c *Client) Stop() {
 
 func (c *Client) ResetSession() error {
 	log.Println("Resetting WhatsApp session...")
-	err := c.WAClient.Logout()
+	err := c.WAClient.Logout(context.Background())
 	if err != nil {
 		return err
 	}
