@@ -114,6 +114,20 @@ func (c *Client) Stop() {
 	}
 }
 
+func (c *Client) ResetSession() error {
+	log.Println("Resetting WhatsApp session...")
+	err := c.WAClient.Logout()
+	if err != nil {
+		return err
+	}
+	
+	c.QRLock.Lock()
+	c.QRCode = ""
+	c.QRLock.Unlock()
+
+	return nil
+}
+
 func (c *Client) GetQR() string {
 	c.QRLock.RLock()
 	defer c.QRLock.RUnlock()
@@ -124,6 +138,10 @@ func (c *Client) eventHandler(evt interface{}) {
 	switch v := evt.(type) {
 	case *events.Message:
 		c.handleMessage(v)
+	case *events.LoggedOut:
+		log.Println("Received LoggedOut event. WhatsApp session was disconnected.")
+		c.ResetSession()
+		// Application must be restarted to regenerate QR, or a reconnect flow triggered.
 	}
 }
 

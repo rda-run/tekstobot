@@ -270,6 +270,16 @@
 					<p class="text-sm text-[var(--teksto-text-secondary)] mt-4 leading-relaxed">Scan the QR Code with the app on your smartphone to connect the bot.</p>
 				</div>
 			</div>
+			{{else}}
+			<div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+				<div class="bg-[var(--teksto-bg-card)] border border-[var(--teksto-border)] p-6 rounded-xl shadow-2xl text-center max-w-sm w-full animate-in zoom-in-95 duration-200">
+					<h3 class="text-lg font-bold tracking-tight text-[var(--teksto-text-primary)] mb-4">WhatsApp Desconectado</h3>
+					<p class="text-sm text-[var(--teksto-text-secondary)] mt-4 leading-relaxed mb-6">O bot não está conectado e a sessão expirou ou travou. Clique no botão abaixo para forçar a desconexão, e após isso reinicie o bot para gerar um novo QR Code.</p>
+					<button hx-post="/whatsapp/reset" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 transition-colors">
+						Limpar Sessão
+					</button>
+				</div>
+			</div>
 			{{end}}
 		</div>
 	{{end}}

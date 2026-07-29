@@ -61,6 +61,7 @@ func (s *Server) Start(port string) error {
 	// Protected routes
 	mux.HandleFunc("/", protect(s.handleDashboard))
 	mux.HandleFunc("/status", protect(s.handleStatus))
+	mux.HandleFunc("/whatsapp/reset", protect(s.handleWhatsAppReset))
 	mux.HandleFunc("/qr.png", protect(s.handleQR))
 	mux.HandleFunc("/phones", protect(s.handlePhones))
 	mux.HandleFunc("/phones/add", protect(s.handleAddPhone))
@@ -99,15 +100,26 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	connected := s.WA.WAClient.IsLoggedIn() && s.WA.WAClient.IsConnected()
 	attempts, _ := s.Repo.ListUnauthorizedAttempts()
+	pendingCount, _ := s.Repo.GetPendingAttemptsCount()
 	s.Tpl.ExecuteTemplate(w, "status.html", map[string]interface{}{
-		"Connected":    connected,
+		"Connected":    s.WA.WAClient.IsConnected() && s.WA.WAClient.IsLoggedIn(),
 		"HasQR":        s.WA.GetQR() != "",
 		"Time":         time.Now().Unix(),
-		"PendingCount": len(attempts),
 		"Attempts":     attempts,
+		"PendingCount": pendingCount,
 	})
+}
+
+func (s *Server) handleWhatsAppReset(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.WA.ResetSession()
+	// Optionally return a script that reloads the page or re-triggers connection on next restart
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) handleQR(w http.ResponseWriter, r *http.Request) {
