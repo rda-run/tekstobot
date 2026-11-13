@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const cloudflareWhisperModel = "@cf/openai/whisper-large-v3-turbo"
@@ -52,7 +53,7 @@ func NewCloudflareClient(accountID, apiToken, language string) *CloudflareClient
 		APIToken:   strings.TrimSpace(apiToken),
 		Model:      cloudflareWhisperModel,
 		Language:   strings.TrimSpace(language),
-		HTTPClient: http.DefaultClient,
+		HTTPClient: &http.Client{Timeout: 5 * time.Minute},
 		BaseURL:    "https://api.cloudflare.com/client/v4",
 	}
 }

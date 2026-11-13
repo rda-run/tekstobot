@@ -68,14 +68,9 @@ func (c *WhisperClient) startHealthCheck(interval time.Duration) {
 }
 
 func (c *WhisperClient) checkAll() {
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-
 	for i, u := range c.URLs {
-		reqURL := fmt.Sprintf("%s/health", u)
-		resp, err := client.Get(reqURL)
-		
+		resp, err := healthHTTPClient.Get(u + "/health")
+
 		isAvailable := err == nil && resp.StatusCode >= 200 && resp.StatusCode < 400
 		if err == nil {
 			resp.Body.Close()
@@ -93,6 +88,12 @@ func (c *WhisperClient) checkAll() {
 		c.mutex.Unlock()
 	}
 }
+
+// ponytail: teto fixo de 1h por transcrição só para um servidor travado não
+// prender a goroutine para sempre; virar config se áudios longos em CPU estourarem.
+var whisperHTTPClient = &http.Client{Timeout: time.Hour}
+
+var healthHTTPClient = &http.Client{Timeout: 5 * time.Second}
 
 type whisperResponse struct {
 	Text string `json:"text"`
@@ -153,7 +154,7 @@ func (c *WhisperClient) ProcessAudio(filePath string) (string, error) {
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := whisperHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("whisper http request failed: %w", err)
 	}

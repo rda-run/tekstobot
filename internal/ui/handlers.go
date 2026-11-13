@@ -82,7 +82,12 @@ func (s *Server) Start(port string) error {
 	}
 
 	log.Printf("Starting UI Server on port %s", port)
-	return http.ListenAndServe(":"+port, mux)
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	return srv.ListenAndServe()
 }
 
 // render executa um template registrando falhas no log.
