@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -87,22 +88,25 @@ func (c *Client) Start() error {
 		if err != nil {
 			return fmt.Errorf("failed to get QR channel: %w", err)
 		}
-		
+
 		err = c.WAClient.Connect()
 		if err != nil {
 			return fmt.Errorf("failed to connect: %w", err)
 		}
-		
+
 		go func() {
 			for evt := range qrChan {
+				code := ""
 				if evt.Event == "code" {
 					log.Println("QR code generated (available via UI)")
-					c.QRLock.Lock()
-					c.QRCode = evt.Code
-					c.QRLock.Unlock()
+					code = evt.Code
 				} else {
+					// success, timeout ou erro: o último QR não vale mais.
 					log.Println("Login event:", evt.Event)
 				}
+				c.QRLock.Lock()
+				c.QRCode = code
+				c.QRLock.Unlock()
 			}
 		}()
 	} else {
@@ -125,15 +129,14 @@ func (c *Client) Stop() {
 
 func (c *Client) ResetSession() error {
 	log.Println("Resetting WhatsApp session...")
-	err := c.WAClient.Logout(context.Background())
-	if err != nil {
-		return err
-	}
-	
 	c.QRLock.Lock()
 	c.QRCode = ""
 	c.QRLock.Unlock()
 
+	// Sessão já encerrada (ex.: logout remoto): não há o que desfazer.
+	if err := c.WAClient.Logout(context.Background()); err != nil && !errors.Is(err, whatsmeow.ErrNotLoggedIn) {
+		return err
+	}
 	return nil
 }
 
@@ -149,7 +152,9 @@ func (c *Client) eventHandler(evt interface{}) {
 		c.handleMessage(v)
 	case *events.LoggedOut:
 		log.Println("Received LoggedOut event. WhatsApp session was disconnected.")
-		c.ResetSession()
+		if err := c.ResetSession(); err != nil {
+			log.Printf("Failed to reset WhatsApp session: %v", err)
+		}
 		// Application must be restarted to regenerate QR, or a reconnect flow triggered.
 	}
 }
