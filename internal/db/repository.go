@@ -63,12 +63,28 @@ func (r *Repository) AddAllowedPhone(phone string, description string) error {
 	return nil
 }
 
-func (r *Repository) DeleteAllowedPhone(id int) error {
-	_, err := r.db.Exec("DELETE FROM allowed_phones WHERE id = $1", id)
+// DeleteAllowedPhone remove o telefone e devolve os arquivos das mídias que
+// o ON DELETE CASCADE apaga junto, para que o chamador os remova do disco.
+func (r *Repository) DeleteAllowedPhone(id int) ([]string, error) {
+	// O SELECT enxerga o snapshot anterior ao DELETE; o cascade roda ao fim do statement.
+	rows, err := r.db.Query(`
+		WITH del AS (DELETE FROM allowed_phones WHERE id = $1 RETURNING phone_number)
+		SELECT pm.file_path FROM processed_media pm JOIN del ON pm.sender_phone = del.phone_number
+	`, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete phone: %w", err)
+		return nil, fmt.Errorf("failed to delete phone: %w", err)
 	}
-	return nil
+	defer rows.Close()
+
+	var files []string
+	for rows.Next() {
+		var f string
+		if err := rows.Scan(&f); err != nil {
+			return files, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
 }
 
 func (r *Repository) ListProcessedMedia(phoneFilter string) ([]ProcessedMedia, error) {

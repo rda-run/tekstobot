@@ -164,7 +164,11 @@ func (s *Server) handleAddPhone(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDeletePhone(w http.ResponseWriter, r *http.Request) {
 	if id, _ := strconv.Atoi(r.URL.Query().Get("id")); id != 0 {
-		logErr("delete phone", s.Repo.DeleteAllowedPhone(id))
+		files, err := s.Repo.DeleteAllowedPhone(id)
+		logErr("delete phone", err)
+		for _, f := range files {
+			os.Remove(f)
+		}
 	}
 	s.handlePhones(w, r)
 }
