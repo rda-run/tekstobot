@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "github.com/lib/pq"
 	"github.com/golang-migrate/migrate/v4"
@@ -40,9 +41,13 @@ func RunMigrations(db *sql.DB) error {
 	return nil
 }
 
+// dsnQuote escapa um valor para o formato key='value' do libpq,
+// para que senhas com espaços, aspas ou barras não quebrem a conexão.
+var dsnQuote = strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace
+
 func GetDSN(cfg *config.Config) string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
+	return fmt.Sprintf("host='%s' port='%s' user='%s' password='%s' dbname='%s' sslmode=disable",
+		dsnQuote(cfg.DBHost), dsnQuote(cfg.DBPort), dsnQuote(cfg.DBUser), dsnQuote(cfg.DBPassword), dsnQuote(cfg.DBName))
 }
 
 func InitDB(cfg *config.Config) (*sql.DB, error) {
