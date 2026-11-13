@@ -75,11 +75,7 @@ func (s *Server) Start(port string) error {
 
 	// Media file server (protected when OIDC is enabled)
 	mediaFS := http.StripPrefix("/data/media/", http.FileServer(http.Dir("data/media")))
-	if s.Auth != nil {
-		mux.Handle("/data/media/", s.Auth.RequireAuthHandler(mediaFS))
-	} else {
-		mux.Handle("/data/media/", mediaFS)
-	}
+	mux.HandleFunc("GET /data/media/", protect(mediaFS.ServeHTTP))
 
 	log.Printf("Starting UI Server on port %s", port)
 	srv := &http.Server{

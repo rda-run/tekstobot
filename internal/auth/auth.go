@@ -138,6 +138,17 @@ func (a *Auth) secureCookies() bool {
 	return strings.HasPrefix(a.cfg.OIDCRedirectURL, "https://")
 }
 
+// redirectToLogin manda para o login. Requisições HTMX recebem HX-Redirect, pois
+// um 302 seria seguido via XHR até o provedor OIDC e barrado por CORS.
+func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/auth/login")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	http.Redirect(w, r, "/auth/login", http.StatusFound)
+}
+
 // HandleLogin redireciona o usuário para o Pocket ID.
 func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	state, err := generateSessionID()
@@ -266,7 +277,7 @@ func (a *Auth) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("tekstobot_session")
 		if err != nil {
-			http.Redirect(w, r, "/auth/login", http.StatusFound)
+			redirectToLogin(w, r)
 			return
 		}
 
@@ -279,7 +290,7 @@ func (a *Auth) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 				Path:   "/",
 				MaxAge: -1,
 			})
-			http.Redirect(w, r, "/auth/login", http.StatusFound)
+			redirectToLogin(w, r)
 			return
 		}
 
@@ -287,25 +298,6 @@ func (a *Auth) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(r.Context(), contextKeySession, session)
 		next(w, r.WithContext(ctx))
 	}
-}
-
-// RequireAuthHandler wraps an http.Handler with authentication.
-func (a *Auth) RequireAuthHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("tekstobot_session")
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		_, err = a.GetSession(cookie.Value)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
 
 // contextKey tipo privado para chaves de contexto.
