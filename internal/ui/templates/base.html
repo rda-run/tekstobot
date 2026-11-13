@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TekstoBot Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // O tema é controlado pela classe .dark no <html>; o padrão do Tailwind (media) seguiria só o SO.
+        tailwind.config = { darkMode: 'class' };
+    </script>
     <script src="https://unpkg.com/htmx.org@2.0.11/dist/htmx.min.js" integrity="sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg" crossorigin="anonymous"></script>
     <style>
         /* Fontes do TekstoBot: Inter (Base) & JetBrains Mono (Tech/Dados) */
