@@ -37,7 +37,7 @@ func (r *Repository) SaveProcessedMedia(media *ProcessedMedia) (int, error) {
 }
 
 func (r *Repository) ListAllowedPhones() ([]AllowedPhone, error) {
-	rows, err := r.db.Query("SELECT id, phone_number, description, created_at FROM allowed_phones ORDER BY id DESC")
+	rows, err := r.db.Query("SELECT id, phone_number, COALESCE(description, ''), created_at FROM allowed_phones ORDER BY id DESC")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list phones: %w", err)
 	}
@@ -51,7 +51,7 @@ func (r *Repository) ListAllowedPhones() ([]AllowedPhone, error) {
 		}
 		phones = append(phones, p)
 	}
-	return phones, nil
+	return phones, rows.Err()
 }
 
 func (r *Repository) AddAllowedPhone(phone string, description string) error {
@@ -88,11 +88,12 @@ func (r *Repository) DeleteAllowedPhone(id int) ([]string, error) {
 
 func (r *Repository) ListProcessedMedia(phoneFilter string) ([]ProcessedMedia, error) {
 	query := `
-		SELECT pm.id, pm.media_type, pm.file_path, pm.extracted_text, pm.sender_phone, pm.status, pm.error_message, pm.created_at, ap.description 
+		SELECT pm.id, pm.media_type, pm.file_path, COALESCE(pm.extracted_text, ''), pm.sender_phone, pm.status,
+		       COALESCE(pm.error_message, ''), pm.created_at, COALESCE(ap.description, '')
 		FROM processed_media pm
 		LEFT JOIN allowed_phones ap ON pm.sender_phone = ap.phone_number
 	`
-	var args []interface{}
+	var args []any
 	if phoneFilter != "" {
 		query += " WHERE pm.sender_phone = $1"
 		args = append(args, phoneFilter)
@@ -108,24 +109,12 @@ func (r *Repository) ListProcessedMedia(phoneFilter string) ([]ProcessedMedia, e
 	var media []ProcessedMedia
 	for rows.Next() {
 		var m ProcessedMedia
-		var errMsg sql.NullString
-		var extText sql.NullString
-		var name sql.NullString
-		if err := rows.Scan(&m.ID, &m.MediaType, &m.FilePath, &extText, &m.SenderPhone, &m.Status, &errMsg, &m.CreatedAt, &name); err != nil {
+		if err := rows.Scan(&m.ID, &m.MediaType, &m.FilePath, &m.ExtractedText, &m.SenderPhone, &m.Status, &m.ErrorMessage, &m.CreatedAt, &m.SenderName); err != nil {
 			return nil, err
-		}
-		if errMsg.Valid {
-			m.ErrorMessage = errMsg.String
-		}
-		if extText.Valid {
-			m.ExtractedText = extText.String
-		}
-		if name.Valid {
-			m.SenderName = name.String
 		}
 		media = append(media, m)
 	}
-	return media, nil
+	return media, rows.Err()
 }
 
 func (r *Repository) UpdateProcessedMedia(id int, extractedText, status, errorMessage string) error {
@@ -185,7 +174,7 @@ func (r *Repository) SaveUnauthorizedAttempt(phone, name string) (bool, error) {
 }
 
 func (r *Repository) ListUnauthorizedAttempts() ([]UnauthorizedAttempt, error) {
-	rows, err := r.db.Query("SELECT id, phone_number, push_name, last_attempt FROM unauthorized_attempts ORDER BY last_attempt DESC")
+	rows, err := r.db.Query("SELECT id, phone_number, COALESCE(push_name, ''), last_attempt FROM unauthorized_attempts ORDER BY last_attempt DESC")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list unauthorized attempts: %w", err)
 	}
@@ -194,16 +183,12 @@ func (r *Repository) ListUnauthorizedAttempts() ([]UnauthorizedAttempt, error) {
 	var attempts []UnauthorizedAttempt
 	for rows.Next() {
 		var a UnauthorizedAttempt
-		var name sql.NullString
-		if err := rows.Scan(&a.ID, &a.PhoneNumber, &name, &a.LastAttempt); err != nil {
+		if err := rows.Scan(&a.ID, &a.PhoneNumber, &a.PushName, &a.LastAttempt); err != nil {
 			return nil, err
-		}
-		if name.Valid {
-			a.PushName = name.String
 		}
 		attempts = append(attempts, a)
 	}
-	return attempts, nil
+	return attempts, rows.Err()
 }
 
 func (r *Repository) DeleteUnauthorizedAttempt(phone string) error {
@@ -216,10 +201,10 @@ func (r *Repository) DeleteUnauthorizedAttempt(phone string) error {
 
 func (r *Repository) ListMediaUsers() ([]MediaUser, error) {
 	query := `
-		SELECT DISTINCT pm.sender_phone, ap.description 
+		SELECT DISTINCT pm.sender_phone, COALESCE(ap.description, '') AS name
 		FROM processed_media pm
 		LEFT JOIN allowed_phones ap ON pm.sender_phone = ap.phone_number
-		ORDER BY ap.description, pm.sender_phone
+		ORDER BY name, pm.sender_phone
 	`
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -230,14 +215,10 @@ func (r *Repository) ListMediaUsers() ([]MediaUser, error) {
 	var users []MediaUser
 	for rows.Next() {
 		var u MediaUser
-		var name sql.NullString
-		if err := rows.Scan(&u.PhoneNumber, &name); err != nil {
+		if err := rows.Scan(&u.PhoneNumber, &u.Name); err != nil {
 			return nil, err
-		}
-		if name.Valid {
-			u.Name = name.String
 		}
 		users = append(users, u)
 	}
-	return users, nil
+	return users, rows.Err()
 }
