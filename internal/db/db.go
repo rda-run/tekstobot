@@ -1,16 +1,19 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
-	_ "github.com/lib/pq"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/lib/pq"
+
 	"tekstobot/internal/config"
 )
 
@@ -23,17 +26,26 @@ func RunMigrations(db *sql.DB) error {
 		return fmt.Errorf("failed to create iofs driver: %w", err)
 	}
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	// Conexão dedicada: m.Close() a devolve ao pool sem fechar o *sql.DB da aplicação.
+	conn, err := db.Conn(context.Background())
 	if err != nil {
+		return fmt.Errorf("failed to get migration connection: %w", err)
+	}
+
+	driver, err := postgres.WithConnection(context.Background(), conn, &postgres.Config{})
+	if err != nil {
+		conn.Close()
 		return fmt.Errorf("failed to create migration driver: %w", err)
 	}
 
 	m, err := migrate.NewWithInstance("iofs", d, "postgres", driver)
 	if err != nil {
+		conn.Close()
 		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
+	defer m.Close()
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -51,14 +63,13 @@ func GetDSN(cfg *config.Config) string {
 }
 
 func InitDB(cfg *config.Config) (*sql.DB, error) {
-	connStr := GetDSN(cfg)
-
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", GetDSN(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
