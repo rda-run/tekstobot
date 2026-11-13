@@ -37,7 +37,9 @@ func NewServer(repo *db.Repository, wa *whatsapp.Client, version string, migrati
 	}
 }
 
-func (s *Server) Start(port string) error {
+// routes monta todas as rotas. Fica separado de Start para o teste pegar conflitos
+// de padrão, que o ServeMux só acusa (com panic) na hora do registro.
+func (s *Server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// protect wraps a handler with auth middleware when OIDC is enabled.
@@ -48,11 +50,11 @@ func (s *Server) Start(port string) error {
 		return handler
 	}
 
-	// Auth routes (always public)
+	// Auth routes (always public). Precisam do método: sem ele conflitam com "GET /".
 	if s.Auth != nil {
-		mux.HandleFunc("/auth/login", s.Auth.HandleLogin)
-		mux.HandleFunc("/auth/callback", s.Auth.HandleCallback)
-		mux.HandleFunc("/auth/logout", s.Auth.HandleLogout)
+		mux.HandleFunc("GET /auth/login", s.Auth.HandleLogin)
+		mux.HandleFunc("GET /auth/callback", s.Auth.HandleCallback)
+		mux.HandleFunc("GET /auth/logout", s.Auth.HandleLogout)
 	}
 
 	// API JSON usada pela interface (web/). Tudo que altera estado exige POST/DELETE: o cookie
@@ -76,11 +78,14 @@ func (s *Server) Start(port string) error {
 
 	// Interface (build do Vite embutido no binário).
 	mux.HandleFunc("GET /", protect(http.FileServerFS(web.Files()).ServeHTTP))
+	return mux
+}
 
+func (s *Server) Start(port string) error {
 	log.Printf("Starting UI Server on port %s", port)
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           mux,
+		Handler:           s.routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	return srv.ListenAndServe()
