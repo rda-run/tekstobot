@@ -147,11 +147,8 @@ OIDC_SESSION_TTL=24
 
 The project uses a `Makefile` to simplify common commands:
 
-1. **Run Migrations:**
-
-   ```bash
-   make migrate-up
-   ```
+1. **Migrations:** nothing to do. The bot applies pending migrations
+   automatically on startup.
 
 2. **Start Whisper (Audio AI, local backend only):**
 
@@ -178,8 +175,9 @@ Run `make` to see the list of available commands:
 - `make run`: Run the project locally.
 - `make whisper`: Start the Whisper container via Podman.
 - `make whisper-stop`: Stop and remove the Whisper container.
-- `make migrate-up`: Run up migrations.
-- `make migrate-down`: Rollback migrations.
+- `make migrate-up`: Apply the SQL files manually via `psql`. Not needed (and
+  not compatible) with the automatic migrations the bot runs on startup.
+- `make migrate-down`: Rollback all migrations via `psql`.
 - `make check`: Run build and import checks.
 
 ## Cloudflare backend notes
