@@ -367,7 +367,7 @@
 
 	<div class="p-4 pt-2 border-t {{if eq .Status "pending"}}border-[#f5e050]/20{{else}}border-[var(--teksto-border)]{{end}} bg-[var(--teksto-bg)] rounded-b-xl">
 		{{if eq .MediaType "audio"}}
-			<audio id="media-audio-{{.ID}}" controls class="w-full h-10 mb-4 rounded-xl outline-none border border-[var(--teksto-border)] shadow-sm bg-[var(--teksto-bg-card)]">
+			<audio id="media-audio-{{.ID}}" controls preload="none" class="w-full h-10 mb-4 rounded-xl outline-none border border-[var(--teksto-border)] shadow-sm bg-[var(--teksto-bg-card)]">
 				<source src="/{{.FilePath}}" type="audio/ogg">
 			</audio>
 		{{end}}
