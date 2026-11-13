@@ -142,6 +142,20 @@ func (r *Repository) UpdateProcessedMedia(id int, extractedText, status, errorMe
 	return nil
 }
 
+// FailStalePending marca como erro as mídias que ficaram "pending" porque o
+// processo foi encerrado no meio da transcrição. Chamar apenas na inicialização.
+func (r *Repository) FailStalePending() (int64, error) {
+	res, err := r.db.Exec(`
+		UPDATE processed_media
+		SET status = 'error', error_message = 'Transcription interrupted by a service restart.'
+		WHERE status = 'pending'
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fail stale pending media: %w", err)
+	}
+	return res.RowsAffected()
+}
+
 func (r *Repository) DeleteProcessedMedia(id int) (string, error) {
 	var filePath string
 	err := r.db.QueryRow("DELETE FROM processed_media WHERE id = $1 RETURNING file_path", id).Scan(&filePath)

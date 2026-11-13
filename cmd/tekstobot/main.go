@@ -101,6 +101,13 @@ func main() {
 
 	// Start modules only if NO migration error
 	if migrationErrStr == "" {
+		// Mídias que ficaram "pending" num encerramento anterior nunca terminariam.
+		if n, err := repo.FailStalePending(); err != nil {
+			log.Printf("Failed to clean stale pending media: %v", err)
+		} else if n > 0 {
+			log.Printf("Marked %d interrupted transcription(s) as error", n)
+		}
+
 		go worker.Start(waClient.MediaChan)
 
 		if err := waClient.Start(); err != nil {
