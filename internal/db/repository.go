@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"time"
 )
 
 type Repository struct {
@@ -165,27 +164,21 @@ func (r *Repository) DeleteProcessedMedia(id int) (string, error) {
 	return filePath, nil
 }
 
+// SaveUnauthorizedAttempt registra a tentativa e informa se é preciso notificar
+// (primeira tentativa, ou última há mais de 1 hora). Um único statement atômico,
+// usando apenas o relógio do banco.
 func (r *Repository) SaveUnauthorizedAttempt(phone, name string) (bool, error) {
-	var lastAttempt sql.NullTime
-	err := r.db.QueryRow("SELECT last_attempt FROM unauthorized_attempts WHERE phone_number = $1", phone).Scan(&lastAttempt)
-	if err != nil && err != sql.ErrNoRows {
-		return false, fmt.Errorf("failed to check last attempt: %w", err)
-	}
-
-	needsNotification := false
-	if !lastAttempt.Valid || time.Since(lastAttempt.Time) > 1*time.Hour {
-		needsNotification = true
-	}
-
+	var needsNotification bool
 	query := `
+		WITH prev AS (SELECT last_attempt FROM unauthorized_attempts WHERE phone_number = $1)
 		INSERT INTO unauthorized_attempts (phone_number, push_name, last_attempt)
 		VALUES ($1, $2, NOW())
 		ON CONFLICT (phone_number) DO UPDATE SET
 			push_name = EXCLUDED.push_name,
 			last_attempt = EXCLUDED.last_attempt
+		RETURNING COALESCE((SELECT last_attempt < NOW() - INTERVAL '1 hour' FROM prev), TRUE)
 	`
-	_, err = r.db.Exec(query, phone, name)
-	if err != nil {
+	if err := r.db.QueryRow(query, phone, name).Scan(&needsNotification); err != nil {
 		return false, fmt.Errorf("failed to save unauthorized attempt: %w", err)
 	}
 	return needsNotification, nil
