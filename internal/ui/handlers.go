@@ -84,13 +84,28 @@ func (s *Server) Start(port string) error {
 	return http.ListenAndServe(":"+port, mux)
 }
 
+// render executa um template registrando falhas no log.
+func (s *Server) render(w http.ResponseWriter, name string, data any) {
+	if err := s.Tpl.ExecuteTemplate(w, name, data); err != nil {
+		log.Printf("Failed to render %s: %v", name, err)
+	}
+}
+
+// logErr registra erros que a UI não tem como exibir, em vez de engoli-los.
+func logErr(action string, err error) {
+	if err != nil {
+		log.Printf("UI: %s: %v", action, err)
+	}
+}
+
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	var userName string
 	if session := auth.SessionFromContext(r.Context()); session != nil {
 		userName = session.DisplayName
 	}
-	mediaUsers, _ := s.Repo.ListMediaUsers()
-	s.Tpl.ExecuteTemplate(w, "base.html", map[string]interface{}{
+	mediaUsers, err := s.Repo.ListMediaUsers()
+	logErr("list media users", err)
+	s.render(w, "base.html", map[string]any{
 		"Version":        s.Version,
 		"MigrationError": s.MigrationError,
 		"UserName":       userName,
@@ -100,8 +115,9 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	attempts, _ := s.Repo.ListUnauthorizedAttempts()
-	s.Tpl.ExecuteTemplate(w, "status.html", map[string]interface{}{
+	attempts, err := s.Repo.ListUnauthorizedAttempts()
+	logErr("list unauthorized attempts", err)
+	s.render(w, "status.html", map[string]any{
 		"Connected":    s.WA.WAClient.IsConnected() && s.WA.WAClient.IsLoggedIn(),
 		"HasQR":        s.WA.GetQR() != "",
 		"Time":         time.Now().Unix(),
@@ -115,8 +131,7 @@ func (s *Server) handleWhatsAppReset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	s.WA.ResetSession()
-	// Optionally return a script that reloads the page or re-triggers connection on next restart
+	logErr("reset whatsapp session", s.WA.ResetSession())
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
 }
@@ -137,31 +152,28 @@ func (s *Server) handleQR(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePhones(w http.ResponseWriter, r *http.Request) {
-	phones, _ := s.Repo.ListAllowedPhones()
-	s.Tpl.ExecuteTemplate(w, "phones_list.html", phones)
+	phones, err := s.Repo.ListAllowedPhones()
+	logErr("list allowed phones", err)
+	s.render(w, "phones_list.html", phones)
 }
 
 func (s *Server) handleAddPhone(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		phone := r.FormValue("phone")
-		desc := r.FormValue("description")
-		s.Repo.AddAllowedPhone(phone, desc)
+		logErr("add phone", s.Repo.AddAllowedPhone(r.FormValue("phone"), r.FormValue("description")))
 	}
 	s.handlePhones(w, r)
 }
 
 func (s *Server) handleDeletePhone(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	id, _ := strconv.Atoi(idStr)
-	if id != 0 {
-		s.Repo.DeleteAllowedPhone(id)
+	if id, _ := strconv.Atoi(r.URL.Query().Get("id")); id != 0 {
+		logErr("delete phone", s.Repo.DeleteAllowedPhone(id))
 	}
 	s.handlePhones(w, r)
 }
 
 func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {
-	phoneFilter := r.URL.Query().Get("phone")
-	media, _ := s.Repo.ListProcessedMedia(phoneFilter)
+	media, err := s.Repo.ListProcessedMedia(r.URL.Query().Get("phone"))
+	logErr("list processed media", err)
 	hasPending := false
 	for _, m := range media {
 		if m.Status == "pending" {
@@ -169,17 +181,16 @@ func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	s.Tpl.ExecuteTemplate(w, "media_list.html", map[string]interface{}{
+	s.render(w, "media_list.html", map[string]any{
 		"Items":      media,
 		"HasPending": hasPending,
 	})
 }
 
 func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	id, _ := strconv.Atoi(idStr)
-	if id != 0 {
+	if id, _ := strconv.Atoi(r.URL.Query().Get("id")); id != 0 {
 		filePath, err := s.Repo.DeleteProcessedMedia(id)
+		logErr("delete media", err)
 		if err == nil && filePath != "" {
 			os.Remove(filePath)
 		}
@@ -188,30 +199,25 @@ func (s *Server) handleDeleteMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListUnauthorized(w http.ResponseWriter, r *http.Request) {
-	attempts, _ := s.Repo.ListUnauthorizedAttempts()
-	s.Tpl.ExecuteTemplate(w, "unauthorized_list.html", attempts)
+	attempts, err := s.Repo.ListUnauthorizedAttempts()
+	logErr("list unauthorized attempts", err)
+	s.render(w, "unauthorized_list.html", attempts)
 }
 
 func (s *Server) handleAuthorizeUnauthorized(w http.ResponseWriter, r *http.Request) {
 	phone := r.URL.Query().Get("phone")
 	name := r.URL.Query().Get("name")
 	if phone != "" {
-		s.Repo.AddAllowedPhone(phone, name)
-		s.Repo.DeleteUnauthorizedAttempt(phone)
-		go s.WA.SendMessage(phone, "Seu acesso no TekstoBot foi autorizado! 🎉\nPor favor, reenvie o seu áudio ou mensagem para que eu possa processar.")
+		logErr("authorize phone", s.Repo.AddAllowedPhone(phone, name))
+		logErr("delete unauthorized attempt", s.Repo.DeleteUnauthorizedAttempt(phone))
+		s.WA.Notify(phone, "Seu acesso no TekstoBot foi autorizado! 🎉\nPor favor, reenvie o seu áudio ou mensagem para que eu possa processar.")
 	}
-	// After authorizing, we want to refresh both lists or just the unauthorized one.
-	// Since HTMX usually targets one element, we'll return the updated unauthorized list,
-	// and use an OOB swap to update the phones list if needed.
-	attempts, _ := s.Repo.ListUnauthorizedAttempts()
-	s.Tpl.ExecuteTemplate(w, "unauthorized_list.html", attempts)
+	s.handleListUnauthorized(w, r)
 }
 
 func (s *Server) handleDeleteUnauthorized(w http.ResponseWriter, r *http.Request) {
-	phone := r.URL.Query().Get("phone")
-	if phone != "" {
-		s.Repo.DeleteUnauthorizedAttempt(phone)
+	if phone := r.URL.Query().Get("phone"); phone != "" {
+		logErr("delete unauthorized attempt", s.Repo.DeleteUnauthorizedAttempt(phone))
 	}
-	attempts, _ := s.Repo.ListUnauthorizedAttempts()
-	s.Tpl.ExecuteTemplate(w, "unauthorized_list.html", attempts)
+	s.handleListUnauthorized(w, r)
 }

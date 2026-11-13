@@ -237,7 +237,9 @@ func (a *Auth) HandleCallback(w http.ResponseWriter, r *http.Request) {
 func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("tekstobot_session")
 	if err == nil {
-		a.DeleteSession(cookie.Value)
+		if err := a.DeleteSession(cookie.Value); err != nil {
+			log.Printf("Failed to delete session: %v", err)
+		}
 	}
 
 	http.SetCookie(w, &http.Cookie{

@@ -71,6 +71,15 @@ func (c *Client) SendMessage(phone string, text string) error {
 	return nil
 }
 
+// Notify envia uma mensagem em segundo plano, registrando falhas no log.
+func (c *Client) Notify(phone string, text string) {
+	go func() {
+		if err := c.SendMessage(phone, text); err != nil {
+			log.Printf("Failed to notify %s: %v", phone, err)
+		}
+	}()
+}
+
 func (c *Client) Start() error {
 	if c.WAClient.Store.ID == nil {
 		// No ID stored, new login
@@ -146,7 +155,7 @@ func (c *Client) eventHandler(evt interface{}) {
 }
 
 func (c *Client) handleMessage(msg *events.Message) {
-	// Ignores messages from the bot itself, Groups, or Broadcast lists 
+	// Ignores messages from the bot itself, Groups, or Broadcast lists
 	if msg.Info.IsFromMe || msg.Info.IsGroup || msg.Info.Chat.Server == "broadcast" {
 		return
 	}
@@ -171,12 +180,12 @@ func (c *Client) handleMessage(msg *events.Message) {
 
 		if needsNotification {
 			// Notify User
-			go c.SendMessage(senderPhone, "Olá! O seu acesso está pendente e será autorizado pela nossa equipe em breve.")
+			c.Notify(senderPhone, "Olá! O seu acesso está pendente e será autorizado pela nossa equipe em breve.")
 
 			// Notify Admin
 			if c.AdminPhone != "" {
 				adminMsg := fmt.Sprintf("⚠️ Novo usuário aguardando autorização no TekstoBot: %s (%s). Acesse a dashboard para aprovar.", pushName, senderPhone)
-				go c.SendMessage(c.AdminPhone, adminMsg)
+				c.Notify(c.AdminPhone, adminMsg)
 			}
 		}
 		return
