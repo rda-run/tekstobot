@@ -302,7 +302,7 @@
     <div class="flex items-center justify-between p-3 rounded-xl border border-[var(--teksto-border)] bg-[var(--teksto-bg)] hover:border-[#0d7c6f]/50 transition-all group">
         <div class="flex flex-col">
             <span class="text-sm font-semibold text-[var(--teksto-text-primary)] font-jetbrains">{{.PhoneNumber}}</span>
-            <span class="text-xs text-[var(--teksto-text-secondary)]">{{if .PushName}}{{.PushName}}{{else}}Unknown{{end}} &bull; {{.LastAttempt.Format "02/01/2006 as 15:04"}}</span>
+            <span class="text-xs text-[var(--teksto-text-secondary)]">{{if .PushName}}{{.PushName}}{{else}}Unknown{{end}} &bull; {{.LastAttempt.Local.Format "02/01/2006 as 15:04"}}</span>
         </div>
         <div class="flex items-center space-x-1">
             <button hx-post="/unauthorized/authorize?phone={{.PhoneNumber | urlquery}}&name={{.PushName | urlquery}}" hx-target="#unauthorized-list" hx-swap="innerHTML" class="inline-flex items-center justify-center p-1.5 rounded-lg text-[#33bc6e] hover:bg-[#33bc6e]/10 transition-colors" title="Authorize">
@@ -355,7 +355,7 @@
 					<span class="inline-flex items-center rounded-full border border-[#33bc6e]/30 bg-[#33bc6e]/10 text-[#33bc6e] px-2.5 py-0.5 text-xs font-jetbrains font-semibold dark:shadow-[0_0_10px_rgba(51,188,110,0.3)]">completed</span>
 				{{end}}
 			</div>
-            <span class="text-xs text-[var(--teksto-text-secondary)] font-medium">De: {{if .SenderName}}{{.SenderName}}{{else}}{{.SenderPhone}}{{end}} &bull; {{.CreatedAt.Format "02/01/2006 as 15:04"}}</span>
+            <span class="text-xs text-[var(--teksto-text-secondary)] font-medium">De: {{if .SenderName}}{{.SenderName}}{{else}}{{.SenderPhone}}{{end}} &bull; {{.CreatedAt.Local.Format "02/01/2006 as 15:04"}}</span>
         </div>
 		<div class="flex items-center space-x-3">
 			<button hx-delete="/media/delete?id={{.ID}}" hx-target="body" hx-swap="innerHTML" hx-confirm="Delete this file permanently?" class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors hover:bg-rose-500/10 hover:text-rose-500 h-8 w-8 text-[var(--teksto-text-secondary)] opacity-0 group-hover:opacity-100" title="Delete">
