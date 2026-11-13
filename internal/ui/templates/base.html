@@ -7,7 +7,6 @@
     <title>TekstoBot Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js"></script>
     <style>
         /* Fontes do TekstoBot: Inter (Base) & JetBrains Mono (Tech/Dados) */
         @import url('https://rsms.me/inter/inter.css');
@@ -108,7 +107,7 @@
         })();
     </script>
 </head>
-<body class="font-inter antialiased h-screen flex flex-col" hx-ext="morph">
+<body class="font-inter antialiased h-screen flex flex-col">
     {{if .MigrationError}}
     <!-- Maintenance / Error Only Mode -->
     <div class="fixed inset-0 bg-[var(--teksto-bg)] z-[100] flex items-center justify-center p-6">
