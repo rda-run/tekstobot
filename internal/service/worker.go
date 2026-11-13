@@ -71,6 +71,8 @@ func (w *Worker) processMessage(msg *events.Message) {
 	})
 	if saveErr != nil {
 		log.Printf("Failed to save media entry to db: %v", saveErr)
+		// Sem registro no banco ninguém mais referencia o arquivo: não deixar órfão no disco.
+		defer os.Remove(filePath)
 	}
 
 	// 3. Transcribe
