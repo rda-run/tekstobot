@@ -14,12 +14,12 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) IsPhoneAllowed(phone string) (bool, error) {
-	var count int
-	err := r.db.QueryRow("SELECT COUNT(*) FROM allowed_phones WHERE phone_number = $1", phone).Scan(&count)
+	var allowed bool
+	err := r.db.QueryRow("SELECT EXISTS(SELECT 1 FROM allowed_phones WHERE phone_number = $1)", phone).Scan(&allowed)
 	if err != nil {
 		return false, fmt.Errorf("failed to check phone: %w", err)
 	}
-	return count > 0, nil
+	return allowed, nil
 }
 
 func (r *Repository) SaveProcessedMedia(media *ProcessedMedia) (int, error) {
