@@ -132,6 +132,12 @@ func (a *Auth) CleanExpiredSessions() {
 
 // ---------- HTTP Handlers ----------
 
+// secureCookies indica se a própria aplicação é servida por HTTPS (e não o provedor):
+// cookie Secure em app HTTP é descartado pelo navegador e o login nunca completa.
+func (a *Auth) secureCookies() bool {
+	return strings.HasPrefix(a.cfg.OIDCRedirectURL, "https://")
+}
+
 // HandleLogin redireciona o usuário para o Pocket ID.
 func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	state, err := generateSessionID()
@@ -148,7 +154,7 @@ func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   300, // 5 minutos
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   strings.HasPrefix(a.cfg.OIDCIssuerURL, "https"),
+		Secure:   a.secureCookies(),
 	})
 
 	http.Redirect(w, r, a.oauth2Cfg.AuthCodeURL(state), http.StatusFound)
@@ -226,7 +232,7 @@ func (a *Auth) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   a.cfg.OIDCSessionTTL * 3600,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   strings.HasPrefix(a.cfg.OIDCIssuerURL, "https"),
+		Secure:   a.secureCookies(),
 	})
 
 	log.Printf("OIDC login successful: %s (%s)", claims.Email, claims.Name)
