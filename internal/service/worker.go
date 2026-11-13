@@ -81,7 +81,7 @@ func (w *Worker) processMessage(msg *events.Message) {
 		if err == nil {
 			fileName := fmt.Sprintf("audio_%d.ogg", time.Now().UnixNano())
 			filePath = filepath.Join("data", "media", fileName)
-			err = os.WriteFile(filePath, mediaData, 0644)
+			err = os.WriteFile(filePath, mediaData, 0600)
 		}
 	}
 

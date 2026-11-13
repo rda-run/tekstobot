@@ -33,7 +33,8 @@ chmod 644 "$QUADLET_DIR/whisper.container"
 # Ensure data directories exist for the native service and whisper container
 mkdir -p /var/lib/tekstobot/data
 mkdir -p /var/lib/tekstobot/whisper/cache
-chmod -R 755 /var/lib/tekstobot
+# Os áudios dos usuários ficam aqui: só root (serviço e container) precisa entrar.
+chmod 750 /var/lib/tekstobot
 
 echo "Reloading systemd to activate Quadlets..."
 systemctl daemon-reload

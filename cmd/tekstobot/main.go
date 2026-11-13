@@ -35,7 +35,7 @@ func main() {
 		migrationErrStr = err.Error()
 	}
 
-	if err := os.MkdirAll("data/media", os.ModePerm); err != nil {
+	if err := os.MkdirAll("data/media", 0750); err != nil {
 		log.Fatalf("Failed to create media directory: %v", err)
 	}
 
