@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -61,7 +60,7 @@ func main() {
 	default:
 		log.Fatalf(
 			"invalid TRANSCRIBER_BACKEND value %q (supported: local, cloudflare)",
-			fmt.Sprintf("%s", cfg.TranscriberBackend),
+			cfg.TranscriberBackend,
 		)
 	}
 

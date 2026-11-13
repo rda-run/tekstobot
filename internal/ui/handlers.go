@@ -149,6 +149,7 @@ func (s *Server) handleQR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Write(png)
 }
 

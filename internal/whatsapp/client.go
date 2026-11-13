@@ -55,17 +55,13 @@ func NewClient(repo *db.Repository, dsn string, adminPhone string) (*Client, err
 }
 
 func (c *Client) SendMessage(phone string, text string) error {
-	recipient, err := types.ParseJID(phone + "@s.whatsapp.net")
-	if err != nil {
-		return fmt.Errorf("failed to parse recipient JID: %w", err)
-	}
+	recipient := types.NewJID(phone, types.DefaultUserServer)
 
 	msg := &waE2E.Message{
 		Conversation: proto.String(text),
 	}
 
-	_, err = c.WAClient.SendMessage(context.Background(), recipient, msg)
-	if err != nil {
+	if _, err := c.WAClient.SendMessage(context.Background(), recipient, msg); err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
 

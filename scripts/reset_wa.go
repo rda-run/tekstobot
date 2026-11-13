@@ -13,7 +13,7 @@ import (
 func main() {
 	cfg := config.Load()
 	dsn := db.GetDSN(cfg)
-	
+
 	dbLog := waLog.Stdout("Database", "WARN", true)
 	container, err := sqlstore.New(context.Background(), "postgres", dsn, dbLog)
 	if err != nil {
