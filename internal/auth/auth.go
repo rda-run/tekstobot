@@ -57,6 +57,10 @@ func New(cfg *config.Config, db *sql.DB) (*Auth, error) {
 		ClientID: cfg.OIDCClientID,
 	})
 
+	if cfg.OIDCSessionTTL <= 0 {
+		cfg.OIDCSessionTTL = 24
+	}
+
 	return &Auth{
 		cfg:        cfg,
 		db:         db,
