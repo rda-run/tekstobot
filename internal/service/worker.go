@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow"
-	waProto "go.mau.fi/whatsmeow/binary/proto"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/protobuf/proto"
@@ -32,14 +32,6 @@ func NewWorker(repo *db.Repository, transcriber ai.Transcriber, wa *whatsmeow.Cl
 	}
 }
 
-type MediaJob struct {
-	SenderPhone  string
-	MsgID        string
-	Chat         types.JID
-	MediaType    string // always "audio"
-	AudioMessage *waProto.AudioMessage
-}
-
 func (w *Worker) Start(mediaChan <-chan *events.Message) {
 	for msg := range mediaChan {
 		go w.processMessage(msg)
@@ -47,54 +39,34 @@ func (w *Worker) Start(mediaChan <-chan *events.Message) {
 }
 
 func (w *Worker) processMessage(msg *events.Message) {
-	senderPhone := msg.Info.Sender.User
-
-	var mediaType string
-	var audioMsg *waProto.AudioMessage
-
-	if msg.Message.GetAudioMessage() != nil {
-		mediaType = "audio"
-		audioMsg = msg.Message.GetAudioMessage()
-	} else {
+	audioMsg := msg.Message.GetAudioMessage()
+	if audioMsg == nil {
 		return
 	}
 
-	job := MediaJob{
-		SenderPhone:  senderPhone,
-		MsgID:        msg.Info.ID,
-		Chat:         msg.Info.Chat,
-		MediaType:    mediaType,
-		AudioMessage: audioMsg,
-	}
-
-	var filePath string
+	senderPhone := msg.Info.Sender.User
+	chat, msgID := msg.Info.Chat, msg.Info.ID
 
 	// Notify user immediately that processing has started
-	w.replyText(job.Chat, job.MsgID, "⏳ *Processing...*")
+	w.reply(chat, msgID, "⏳ *Processing...*")
 
 	// 1. Download media
-	var mediaData []byte
-	var err error
-
-	if job.MediaType == "audio" {
-		mediaData, err = w.WAClient.Download(context.Background(), job.AudioMessage)
-		if err == nil {
-			fileName := fmt.Sprintf("audio_%d.ogg", time.Now().UnixNano())
-			filePath = filepath.Join("data", "media", fileName)
-			err = os.WriteFile(filePath, mediaData, 0600)
-		}
+	filePath := filepath.Join("data", "media", fmt.Sprintf("audio_%d.ogg", time.Now().UnixNano()))
+	mediaData, err := w.WAClient.Download(context.Background(), audioMsg)
+	if err == nil {
+		err = os.WriteFile(filePath, mediaData, 0600)
 	}
-
 	if err != nil {
-		w.replyError(job.Chat, job.MsgID, "Failed to download media.")
+		log.Printf("Failed to download media from %s: %v", senderPhone, err)
+		w.reply(chat, msgID, "❌ Error: Failed to download media.")
 		return
 	}
 
 	// 2. Save to database with "pending" status so it shows up in the UI immediately
 	mediaID, saveErr := w.Repo.SaveProcessedMedia(&db.ProcessedMedia{
-		MediaType:   job.MediaType,
+		MediaType:   "audio",
 		FilePath:    filePath,
-		SenderPhone: job.SenderPhone,
+		SenderPhone: senderPhone,
 		Status:      "pending",
 	})
 	if saveErr != nil {
@@ -102,17 +74,11 @@ func (w *Worker) processMessage(msg *events.Message) {
 	}
 
 	// 3. Transcribe
-	var extractedText, errorMsg, status string
-	status = "completed"
-
-	if job.MediaType == "audio" {
-		extractedText, err = w.Transcriber.ProcessAudio(filePath)
-		if err != nil {
-			status = "error"
-			errorMsg = err.Error()
-			log.Printf("Whisper error: %v", err)
-			w.replyError(job.Chat, job.MsgID, "Failed to transcribe audio with Whisper.")
-		}
+	extractedText, err := w.Transcriber.ProcessAudio(filePath)
+	status, errorMsg := "completed", ""
+	if err != nil {
+		status, errorMsg = "error", err.Error()
+		log.Printf("Whisper error: %v", err)
 	}
 
 	// 4. Update database record with result
@@ -122,46 +88,26 @@ func (w *Worker) processMessage(msg *events.Message) {
 		}
 	}
 
-	// 5. Send successful reply
+	// 5. Reply with the result
 	if status == "completed" {
-		replyMsg := &waProto.Message{
-			ExtendedTextMessage: &waProto.ExtendedTextMessage{
-				Text: proto.String(fmt.Sprintf("📝 *Transcription:*\n\n%s", extractedText)),
-				ContextInfo: &waProto.ContextInfo{
-					StanzaID:    proto.String(job.MsgID),
-					Participant: proto.String(job.Chat.String()),
-				},
-			},
-		}
-		_, err = w.WAClient.SendMessage(context.Background(), job.Chat, replyMsg)
-		if err != nil {
-			log.Printf("Failed to send reply to %s: %v", job.SenderPhone, err)
-		}
+		w.reply(chat, msgID, fmt.Sprintf("📝 *Transcription:*\n\n%s", extractedText))
+	} else {
+		w.reply(chat, msgID, "❌ Error: Failed to transcribe audio with Whisper.")
 	}
 }
 
-func (w *Worker) replyError(chat types.JID, msgID string, text string) {
-	replyMsg := &waProto.Message{
-		ExtendedTextMessage: &waProto.ExtendedTextMessage{
-			Text: proto.String(fmt.Sprintf("❌ Error: %s", text)),
-			ContextInfo: &waProto.ContextInfo{
-				StanzaID:    proto.String(msgID),
-				Participant: proto.String(chat.String()),
-			},
-		},
-	}
-	w.WAClient.SendMessage(context.Background(), chat, replyMsg)
-}
-
-func (w *Worker) replyText(chat types.JID, msgID string, text string) {
-	replyMsg := &waProto.Message{
-		ExtendedTextMessage: &waProto.ExtendedTextMessage{
+// reply envia um texto citando a mensagem original.
+func (w *Worker) reply(chat types.JID, msgID string, text string) {
+	replyMsg := &waE2E.Message{
+		ExtendedTextMessage: &waE2E.ExtendedTextMessage{
 			Text: proto.String(text),
-			ContextInfo: &waProto.ContextInfo{
+			ContextInfo: &waE2E.ContextInfo{
 				StanzaID:    proto.String(msgID),
 				Participant: proto.String(chat.String()),
 			},
 		},
 	}
-	w.WAClient.SendMessage(context.Background(), chat, replyMsg)
+	if _, err := w.WAClient.SendMessage(context.Background(), chat, replyMsg); err != nil {
+		log.Printf("Failed to send reply to %s: %v", chat.User, err)
+	}
 }
