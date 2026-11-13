@@ -58,19 +58,20 @@ func (s *Server) Start(port string) error {
 		mux.HandleFunc("/auth/logout", s.Auth.HandleLogout)
 	}
 
-	// Protected routes
-	mux.HandleFunc("/", protect(s.handleDashboard))
-	mux.HandleFunc("/status", protect(s.handleStatus))
-	mux.HandleFunc("/whatsapp/reset", protect(s.handleWhatsAppReset))
-	mux.HandleFunc("/qr.png", protect(s.handleQR))
-	mux.HandleFunc("/phones", protect(s.handlePhones))
-	mux.HandleFunc("/phones/add", protect(s.handleAddPhone))
-	mux.HandleFunc("/phones/delete", protect(s.handleDeletePhone))
-	mux.HandleFunc("/media", protect(s.handleMedia))
-	mux.HandleFunc("/media/delete", protect(s.handleDeleteMedia))
-	mux.HandleFunc("/unauthorized", protect(s.handleListUnauthorized))
-	mux.HandleFunc("/unauthorized/authorize", protect(s.handleAuthorizeUnauthorized))
-	mux.HandleFunc("/unauthorized/delete", protect(s.handleDeleteUnauthorized))
+	// Protected routes. Tudo que altera estado exige POST/DELETE: o cookie de sessão é
+	// SameSite=Lax, então um link GET em outro site conseguiria, por exemplo, autorizar um número.
+	mux.HandleFunc("GET /{$}", protect(s.handleDashboard))
+	mux.HandleFunc("GET /status", protect(s.handleStatus))
+	mux.HandleFunc("POST /whatsapp/reset", protect(s.handleWhatsAppReset))
+	mux.HandleFunc("GET /qr.png", protect(s.handleQR))
+	mux.HandleFunc("GET /phones", protect(s.handlePhones))
+	mux.HandleFunc("POST /phones/add", protect(s.handleAddPhone))
+	mux.HandleFunc("DELETE /phones/delete", protect(s.handleDeletePhone))
+	mux.HandleFunc("GET /media", protect(s.handleMedia))
+	mux.HandleFunc("DELETE /media/delete", protect(s.handleDeleteMedia))
+	mux.HandleFunc("GET /unauthorized", protect(s.handleListUnauthorized))
+	mux.HandleFunc("POST /unauthorized/authorize", protect(s.handleAuthorizeUnauthorized))
+	mux.HandleFunc("DELETE /unauthorized/delete", protect(s.handleDeleteUnauthorized))
 
 	// Media file server (protected when OIDC is enabled)
 	mediaFS := http.StripPrefix("/data/media/", http.FileServer(http.Dir("data/media")))
@@ -127,10 +128,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWhatsAppReset(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	logErr("reset whatsapp session", s.WA.ResetSession())
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
