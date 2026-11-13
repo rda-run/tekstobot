@@ -6,13 +6,14 @@ import {
   CheckIcon,
   MoonIcon,
   PlusIcon,
+  SignInIcon,
   SunIcon,
   TrashIcon,
   UsersIcon,
   WarningIcon,
   XIcon,
 } from "@phosphor-icons/react";
-import { api, type Info, type Media, type MediaUser, type Phone, type Status } from "./api";
+import { api, whenUnauthorized, type Info, type Media, type MediaUser, type Phone, type Status } from "./api";
 import { showError } from "./avisos";
 import { useTheme } from "./preferencias";
 
@@ -29,6 +30,7 @@ export function App() {
   const [users, setUsers] = useState<MediaUser[]>([]);
   const [filter, setFilter] = useState(ALL);
   const [access, setAccess] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   const [tick, setTick] = useState(0); // muda a cada consulta, para o QR não ficar em cache
 
   const loadStatus = useCallback(
@@ -49,10 +51,11 @@ export function App() {
   );
 
   useEffect(() => {
+    whenUnauthorized(() => setSignedOut(true));
     api.info().then(setInfo, showError);
   }, []);
 
-  const ready = info !== null && !info.migrationError;
+  const ready = info !== null && !info.migrationError && !signedOut;
   useEffect(() => {
     if (ready) loadMedia().catch(showError);
   }, [ready, loadMedia]);
@@ -72,6 +75,8 @@ export function App() {
     return () => clearInterval(id);
   }, [ready, loadStatus, loadMedia]);
 
+  // Com info já carregado, o 401 veio no meio do uso: a sessão expirou.
+  if (signedOut) return <Login expired={info !== null} />;
   if (!info) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -116,6 +121,41 @@ export function App() {
       </main>
       {access && status && <AccessDialog status={status} onClose={() => setAccess(false)} onChange={reload} />}
       {status && !status.connected && <PairingDialog hasQR={status.hasQR} tick={tick} onReset={loadStatus} />}
+    </div>
+  );
+}
+
+// Tela de login no desenho do Fractessa: dividida pela proporção áurea (1 : 1,618),
+// com o painel da marca na parte menor e o conteúdo no ponto áureo da vertical.
+function Login({ expired }: { expired: boolean }) {
+  return (
+    <div className="min-h-dvh lg:grid lg:grid-cols-[1fr_1.618fr]">
+      <div className="login-panel hidden flex-col justify-between p-12 lg:flex">
+        <div className="flex items-center gap-2.5 self-start rounded-md bg-[#0b0f13] py-2 pr-4 pl-2">
+          <Mark size={32} />
+          <span className="font-brand text-xl font-bold tracking-tight text-[#eef3f6]">
+            tekstobot<span className="text-[#5e87ca]">_</span>
+          </span>
+          <span className="font-mono text-sm text-[#55636f]">/ rda.run</span>
+        </div>
+        <p className="m-0 max-w-sm self-start rounded-md bg-[#0b0f13] px-5 pt-4 pb-5 font-mono text-3xl leading-tight font-bold tracking-tight text-[#eef3f6]">
+          Voice messages in, <span className="text-[#93bee5]">text out.</span>
+        </p>
+      </div>
+      <main className="grid min-h-dvh grid-rows-[1fr_auto_1.618fr] justify-items-center px-6 py-10">
+        <div className="row-start-2 flex w-full max-w-sm flex-col items-start gap-7">
+          <Mark size={56} />
+          <div className="flex flex-col gap-2">
+            <h1 className="m-0 font-mono text-2xl font-bold tracking-tight text-[var(--teksto-ink)]">Sign in to TekstoBot</h1>
+            <p className="m-0 text-sm text-kumo-subtle">
+              {expired ? "Your session expired. Sign in again to continue." : "Use your single sign-on account to open the dashboard."}
+            </p>
+          </div>
+          <Button variant="primary" size="lg" icon={SignInIcon} onClick={() => location.assign("/auth/login")}>
+            Sign in with SSO
+          </Button>
+        </div>
+      </main>
     </div>
   );
 }

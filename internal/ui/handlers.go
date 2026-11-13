@@ -76,8 +76,9 @@ func (s *Server) routes() *http.ServeMux {
 	mediaFS := http.StripPrefix("/data/media/", http.FileServer(http.Dir("data/media")))
 	mux.HandleFunc("GET /data/media/", protect(mediaFS.ServeHTTP))
 
-	// Interface (build do Vite embutido no binário).
-	mux.HandleFunc("GET /", protect(http.FileServerFS(web.Files()).ServeHTTP))
+	// Interface (build do Vite embutido no binário). É pública: sem sessão, a API
+	// responde 401 e a interface mostra a tela de login.
+	mux.Handle("GET /", http.FileServerFS(web.Files()))
 	return mux
 }
 

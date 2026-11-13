@@ -17,6 +17,12 @@ export type Media = {
 };
 export type MediaUser = { phoneNumber: string; name: string };
 
+// Avisado quando a API responde 401, para a interface mostrar a tela de login.
+let onUnauthorized: () => void = () => {};
+export function whenUnauthorized(fn: () => void) {
+  onUnauthorized = fn;
+}
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const resp = await fetch(path, {
     method,
@@ -25,9 +31,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
     credentials: "same-origin",
   });
   if (resp.status === 401) {
-    // Sessão expirada: o login é uma navegação de página inteira (OIDC).
-    location.assign("/auth/login");
-    throw new Error("session expired");
+    // A tela de login assume; a promessa fica pendente para ninguém mostrar aviso de erro.
+    onUnauthorized();
+    return new Promise<T>(() => {});
   }
   if (!resp.ok) throw new Error((await resp.text()).trim() || `error ${resp.status}`);
   if (resp.status === 204) return undefined as T;

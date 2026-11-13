@@ -86,3 +86,13 @@ html:root[data-mode] {
     font-size: 16px !important;
   }
 }
+
+/* Painel da marca na tela de login: tinta escura com a grade de 32px do rda.run
+   (linhas azuis a 10%). É escuro nos dois temas, como a barra de título da marca. */
+.login-panel {
+  background-color: #0b0f13;
+  background-image:
+    linear-gradient(rgb(94 135 202 / 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(94 135 202 / 0.1) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

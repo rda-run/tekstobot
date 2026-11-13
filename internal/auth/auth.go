@@ -253,7 +253,8 @@ func (a *Auth) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// HandleLogout destrói a sessão e redireciona para login.
+// HandleLogout destrói a sessão e volta para a interface, que mostra a tela de login.
+// Ir direto para /auth/login logaria de novo sozinho enquanto a sessão do provedor durasse.
 func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("tekstobot_session")
 	if err == nil {
@@ -269,7 +270,7 @@ func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	})
 
-	http.Redirect(w, r, "/auth/login", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // ---------- Middleware ----------
