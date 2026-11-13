@@ -1,8 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -74,8 +75,7 @@ func getEnv(key, fallback string) string {
 
 func getEnvAsInt(key string, fallback int) int {
 	if valueStr, exists := os.LookupEnv(key); exists {
-		var value int
-		if _, err := fmt.Sscanf(valueStr, "%d", &value); err == nil {
+		if value, err := strconv.Atoi(strings.TrimSpace(valueStr)); err == nil {
 			return value
 		}
 	}
