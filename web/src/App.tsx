@@ -132,7 +132,7 @@ function Login({ expired }: { expired: boolean }) {
     <div className="min-h-dvh lg:grid lg:grid-cols-[1fr_1.618fr]">
       <div className="login-panel hidden flex-col justify-between p-12 lg:flex">
         <div className="flex items-center gap-2.5 self-start rounded-md bg-[#0b0f13] py-2 pr-4 pl-2">
-          <Mark size={32} />
+          <Mark size={36} />
           <span className="font-brand text-xl font-bold tracking-tight text-[#eef3f6]">
             tekstobot<span className="text-[#5e87ca]">_</span>
           </span>
@@ -144,7 +144,7 @@ function Login({ expired }: { expired: boolean }) {
       </div>
       <main className="grid min-h-dvh grid-rows-[1fr_auto_1.618fr] justify-items-center px-6 py-10">
         <div className="row-start-2 flex w-full max-w-sm flex-col items-start gap-7">
-          <Mark size={56} />
+          <Mark size={72} />
           <div className="flex flex-col gap-2">
             <h1 className="m-0 font-mono text-2xl font-bold tracking-tight text-[var(--teksto-ink)]">Sign in to TekstoBot</h1>
             <p className="m-0 text-sm text-kumo-subtle">
@@ -160,15 +160,9 @@ function Login({ expired }: { expired: boolean }) {
   );
 }
 
-// Símbolo t_ da marca (o mesmo desenho de web/public/favicon.svg).
+// Logo do TekstoBot (web/public/logo.svg, o mesmo do site tekstobot.rda.run).
 function Mark({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden="true" className="shrink-0">
-      <rect width="512" height="512" rx="112" fill="#0B0F13" />
-      <path fill="none" stroke="#FFFFFF" strokeWidth="52" d="M210 124V372M138 208H296" />
-      <rect x="318" y="320" width="110" height="52" fill="#4C6CB5" />
-    </svg>
-  );
+  return <img src="/logo.svg" alt="" width={size} height={size} className="shrink-0" />;
 }
 
 function Header({ info, status, onAccess }: { info: Info; status: Status | null; onAccess: () => void }) {
@@ -179,7 +173,7 @@ function Header({ info, status, onAccess }: { info: Info; status: Status | null;
     <header className="sticky top-0 z-10 border-b border-kumo-hairline bg-kumo-canvas/90 backdrop-blur">
       <div className="mx-auto flex min-h-14 w-full max-w-[1200px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-1.5 sm:px-8">
         <a href="/" className="flex items-center gap-2.5 no-underline">
-          <Mark size={26} />
+          <Mark size={34} />
           <span className="font-brand text-[17px] font-bold tracking-tight text-[var(--teksto-ink)]">
             tekstobot<span className="text-kumo-brand">_</span>
           </span>
