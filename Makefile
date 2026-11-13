@@ -9,7 +9,7 @@ DB_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?s
 export VERSION=$(shell cat .version)
 LDFLAGS=-X main.Version=$(VERSION)
 
-.PHONY: help build run release package whisper whisper-stop whisper-cpu clean check migrate-up migrate-down
+.PHONY: help web build run release package whisper whisper-stop whisper-cpu clean check migrate-up migrate-down
 
 .DEFAULT_GOAL := help
 
@@ -17,16 +17,25 @@ help: ## Show this help message
 	@echo "Bot Makefile"
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
+# Build the web UI (web/dist), which is embedded into the binary
+web: web/node_modules ## Build the web UI (requires Node.js)
+	@cd web && npm run build
+	@touch web/dist/.gitkeep
+
+web/node_modules: web/package.json web/package-lock.json
+	@cd web && npm ci
+	@touch web/node_modules
+
 # Build the main binary
-build: check ## Build the main binary
+build: web check ## Build the main binary
 	@go build -ldflags "$(LDFLAGS)" -o bin/tekstobot cmd/tekstobot/main.go
 
 # Run the backend locally
-run: check ## Run the backend locally
+run: web check ## Run the backend locally
 	@go run -ldflags "$(LDFLAGS)" cmd/tekstobot/main.go
 
 # Optimized build for production
-release: check ## Build the optimized production binary
+release: web check ## Build the optimized production binary
 	@CGO_ENABLED=0 go build -ldflags "-s -w $(LDFLAGS)" -trimpath -o bin/tekstobot cmd/tekstobot/main.go
 
 # Package into RPM using nfpm

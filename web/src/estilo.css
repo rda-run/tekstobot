@@ -1,0 +1,88 @@
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles";
+@import "tailwindcss";
+
+/* Linguagem visual rda.run aplicada aos tokens do Kumo (a mesma do projeto Contas). */
+@theme {
+  --font-sans: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace;
+  /* B612 Mono é a fonte da marca: só o wordmark. */
+  --font-brand: "B612 Mono", ui-monospace, Menlo, monospace;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+/* Fora de @layer: os tokens do Kumo saem sem camada e venceriam qualquer @layer. */
+/* Seletor mais específico que os do Kumo (:root[data-mode=dark] etc.). */
+html:root,
+html:root[data-mode] {
+  --color-kumo-canvas: light-dark(#f7fafb, #0b0f13);
+  --color-kumo-base: light-dark(#ffffff, #11161c);
+  --color-kumo-elevated: light-dark(#f7fafb, #171e25);
+  --color-kumo-recessed: light-dark(#eef3f6, #171e25);
+  --color-kumo-tint: light-dark(#eef3f6, #1f2831);
+  --color-kumo-overlay: light-dark(#ffffff, #11161c);
+  --color-kumo-control: light-dark(#ffffff, #11161c);
+  --color-kumo-hairline: light-dark(#dce5eb, #1f2831);
+  --color-kumo-line: light-dark(#bcc9d3, #2b3742);
+  --color-kumo-brand: #4c6cb5;
+  --color-kumo-brand-hover: light-dark(#395188, #5e87ca);
+  --color-kumo-focus: #5e87ca;
+  --color-kumo-info: #4c6cb5;
+  --color-kumo-info-tint: light-dark(#e2e7f6, #1b2740);
+  --color-kumo-success: light-dark(#1fa968, #3fdf8f);
+  --color-kumo-success-tint: light-dark(#dff6ea, #12301f);
+  --color-kumo-danger: light-dark(#c2413a, #e4675e);
+  --color-kumo-danger-tint: light-dark(#fbe9e7, #35171a);
+
+  --text-color-kumo-default: light-dark(#171e25, #bcc9d3);
+  --text-color-kumo-strong: light-dark(#0b0f13, #eef3f6);
+  --text-color-kumo-subtle: light-dark(#55636f, #94a5b2);
+  --text-color-kumo-inactive: light-dark(#94a5b2, #55636f);
+  --text-color-kumo-placeholder: light-dark(#94a5b2, #6e7f8c);
+  --text-color-kumo-brand: #4c6cb5;
+  --text-color-kumo-link: light-dark(#4c6cb5, #93bee5);
+  --text-color-kumo-info: light-dark(#395188, #93bee5);
+  --text-color-kumo-success: light-dark(#0f6b42, #63e7a5);
+  --text-color-kumo-danger: light-dark(#9a2a22, #f2a097);
+
+  /* Cor própria da aplicação (fora dos tokens do Kumo): títulos e wordmark. */
+  --teksto-ink: light-dark(#0b0f13, #eef3f6);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-kumo-canvas);
+    color: var(--text-color-kumo-default);
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .rotulo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-color-kumo-subtle);
+  }
+}
+
+/* O app vira um contexto de empilhamento próprio: o cabeçalho fixo (z-10)
+   não passa por cima dos diálogos e avisos, que o Kumo abre fora de #root. */
+#root {
+  isolation: isolate;
+}
+
+/* Em telas de toque, campos com 16px: abaixo disso o iPhone dá zoom ao focar. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

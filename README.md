@@ -23,14 +23,17 @@ for local Whisper servers and Cloudflare Workers AI.
 - **AI (STT):**
   [faster-whisper-server](https://github.com/fedirz/faster-whisper-server) (via
   Podman/Docker) or [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/)
-- **Frontend:** Go `html/template`, [HTMX](https://htmx.org/) and [Tailwind
-  CSS](https://tailwindcss.com/)
+- **Frontend:** React with [Kumo](https://kumo-ui.com/) components and
+  [Tailwind CSS](https://tailwindcss.com/), built with Vite (`web/`) and
+  embedded into the binary
 
 ## 📋 Prerequisites
 
 1. **Go 1.21+** installed.
 2. **PostgreSQL** running locally.
 3. **Podman** (or Docker) for local Whisper server mode.
+4. **Node.js 20+** and npm, to build the web UI (build time only; the binary
+   embeds the result).
 4. **psql** (PostgreSQL client) to run migrations via Makefile.
 5. For Cloudflare mode: Cloudflare account with Workers AI enabled, account ID,
    and API token.
@@ -169,6 +172,9 @@ The project uses a `Makefile` to simplify common commands:
 
 Run `make` to see the list of available commands:
 
+- `make web`: Build the web UI into `web/dist` (done automatically by `build`,
+  `run` and `release`). To work on the UI with live reload, also run
+  `cd web && npm run dev` and open `http://localhost:5173`.
 - `make build`: Build the binary.
 - `make release`: Build the optimized binary for production.
 - `make package`: Generate the RPM package using nfpm.

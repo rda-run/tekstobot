@@ -5,32 +5,32 @@ import (
 )
 
 type AllowedPhone struct {
-	ID          int
-	PhoneNumber string
-	Description string
-	CreatedAt   time.Time
+	ID          int       `json:"id"`
+	PhoneNumber string    `json:"phoneNumber"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type ProcessedMedia struct {
-	ID            int
-	MediaType     string
-	FilePath      string
-	ExtractedText string
-	SenderPhone   string
-	SenderName    string
-	Status        string
-	ErrorMessage  string
-	CreatedAt     time.Time
+	ID            int       `json:"id"`
+	MediaType     string    `json:"mediaType"`
+	FilePath      string    `json:"filePath"`
+	ExtractedText string    `json:"extractedText"`
+	SenderPhone   string    `json:"senderPhone"`
+	SenderName    string    `json:"senderName"`
+	Status        string    `json:"status"`
+	ErrorMessage  string    `json:"errorMessage"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type UnauthorizedAttempt struct {
-	ID          int
-	PhoneNumber string
-	PushName    string
-	LastAttempt time.Time
+	ID          int       `json:"id"`
+	PhoneNumber string    `json:"phoneNumber"`
+	PushName    string    `json:"pushName"`
+	LastAttempt time.Time `json:"lastAttempt"`
 }
 
 type MediaUser struct {
-	PhoneNumber string
-	Name        string
+	PhoneNumber string `json:"phoneNumber"`
+	Name        string `json:"name"`
 }

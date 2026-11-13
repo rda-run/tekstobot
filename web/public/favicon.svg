@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícone do TekstoBot (t_), no mesmo desenho dos projetos rda.run. -->
+  <rect width="512" height="512" rx="112" fill="#0B0F13"/>
+  <path fill="none" stroke="#FFFFFF" stroke-width="52" d="M210 124V372M138 208H296"/>
+  <rect x="318" y="320" width="110" height="52" fill="#4C6CB5"/>
+</svg>

@@ -24,3 +24,7 @@ data/media/
 .go_cache/
 .go_build_cache/
 *.rpm
+# Web UI dependencies and build output
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep

@@ -142,11 +142,10 @@ func (a *Auth) secureCookies() bool {
 	return strings.HasPrefix(a.cfg.OIDCRedirectURL, "https://")
 }
 
-// redirectToLogin manda para o login. Requisições HTMX recebem HX-Redirect, pois
-// um 302 seria seguido via XHR até o provedor OIDC e barrado por CORS.
+// redirectToLogin manda para o login. Chamadas da API recebem 401, pois um 302
+// seria seguido pelo fetch até o provedor OIDC e barrado por CORS.
 func redirectToLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Redirect", "/auth/login")
+	if strings.HasPrefix(r.URL.Path, "/api/") {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
