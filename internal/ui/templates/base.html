@@ -234,7 +234,7 @@
 				<!-- Allowed Phones -->
 				<div class="space-y-4">
 					<h4 class="text-xs font-bold text-[#0d7c6f] uppercase tracking-widest">Whitelisted (Authorized)</h4>
-					<div id="phones-list" hx-get="/phones" hx-trigger="load">
+					<div id="phones-list" hx-get="/phones" hx-trigger="load, access-updated from:body">
 						<!-- Loaded via htmx -->
 					</div>
 				</div>
@@ -313,9 +313,6 @@
     <p class="text-sm text-[var(--teksto-text-secondary)] py-4 text-center border-dashed border border-[var(--teksto-border)] rounded-xl italic">No pending attempts.</p>
     {{end}}
 </div>
-
-<!-- Trigger list updates on other components -->
-<div hx-get="/phones" hx-target="#phones-list" hx-trigger="load" hx-swap-oob="true"></div>
 {{end}}
 
 {{define "phones_list.html"}}

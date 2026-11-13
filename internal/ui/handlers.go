@@ -158,10 +158,17 @@ func (s *Server) handlePhones(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "phones_list.html", phones)
 }
 
+// accessUpdated avisa a página (evento HTMX) que a lista de acesso mudou,
+// para as demais listas se atualizarem.
+func accessUpdated(w http.ResponseWriter) {
+	w.Header().Set("HX-Trigger", "access-updated")
+}
+
 func (s *Server) handleAddPhone(w http.ResponseWriter, r *http.Request) {
 	// O WhatsApp identifica o remetente só por dígitos: "+55 (11) 9..." nunca casaria.
 	if phone := nonDigits.ReplaceAllString(r.FormValue("phone"), ""); phone != "" {
 		logErr("add phone", s.Repo.AddAllowedPhone(phone, r.FormValue("description")))
+		accessUpdated(w)
 	}
 	s.handlePhones(w, r)
 }
@@ -173,6 +180,7 @@ func (s *Server) handleDeletePhone(w http.ResponseWriter, r *http.Request) {
 		for _, f := range files {
 			os.Remove(f)
 		}
+		accessUpdated(w)
 	}
 	s.handlePhones(w, r)
 }
@@ -217,6 +225,7 @@ func (s *Server) handleAuthorizeUnauthorized(w http.ResponseWriter, r *http.Requ
 		logErr("authorize phone", s.Repo.AddAllowedPhone(phone, name))
 		logErr("delete unauthorized attempt", s.Repo.DeleteUnauthorizedAttempt(phone))
 		s.WA.Notify(phone, "Seu acesso no TekstoBot foi autorizado! 🎉\nPor favor, reenvie o seu áudio ou mensagem para que eu possa processar.")
+		accessUpdated(w)
 	}
 	s.handleListUnauthorized(w, r)
 }
