@@ -105,3 +105,35 @@ func TestWhisperClientProcessAudioNoServers(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestWhisperClientProcessAudioFailover(t *testing.T) {
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			return
+		}
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer down.Close()
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"text":"from second server"}`))
+	}))
+	defer up.Close()
+
+	audioPath := t.TempDir() + "/audio.ogg"
+	if err := os.WriteFile(audioPath, []byte("audio-bytes"), 0600); err != nil {
+		t.Fatalf("write temp file: %v", err)
+	}
+
+	client := NewWhisperClient(&config.Config{
+		WhisperURL:            down.URL + "," + up.URL,
+		WhisperHealthInterval: 3600,
+	})
+
+	got, err := client.ProcessAudio(audioPath)
+	if err != nil {
+		t.Fatalf("ProcessAudio returned error: %v", err)
+	}
+	if got != "from second server" {
+		t.Fatalf("expected failover to second server, got %q", got)
+	}
+}

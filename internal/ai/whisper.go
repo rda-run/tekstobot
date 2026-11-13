@@ -101,16 +101,15 @@ type whisperResponse struct {
 
 func (c *WhisperClient) ProcessAudio(filePath string) (string, error) {
 	c.mutex.RLock()
-	var targetURL string
+	var targets []string
 	for i, isAvailable := range c.availability {
 		if isAvailable {
-			targetURL = c.URLs[i]
-			break
+			targets = append(targets, c.URLs[i])
 		}
 	}
 	c.mutex.RUnlock()
 
-	if targetURL == "" {
+	if len(targets) == 0 {
 		return "", fmt.Errorf("no whisper servers available")
 	}
 
@@ -146,13 +145,28 @@ func (c *WhisperClient) ProcessAudio(filePath string) (string, error) {
 		return "", fmt.Errorf("failed to close multipart writer: %w", err)
 	}
 
+	// Failover: tenta os servidores disponíveis em ordem de prioridade.
+	for i, target := range targets {
+		var text string
+		text, err = c.transcribe(target, writer.FormDataContentType(), body.Bytes())
+		if err == nil {
+			return text, nil
+		}
+		if i < len(targets)-1 {
+			log.Printf("Whisper server '%s' failed, trying next: %v", target, err)
+		}
+	}
+	return "", err
+}
+
+func (c *WhisperClient) transcribe(targetURL, contentType string, body []byte) (string, error) {
 	url := fmt.Sprintf("%s/v1/audio/transcriptions", targetURL)
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("failed to create whisper request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 
 	resp, err := whisperHTTPClient.Do(req)
 	if err != nil {
