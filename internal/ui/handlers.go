@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 
 //go:embed templates/*.html
 var templatesFS embed.FS
+
+var nonDigits = regexp.MustCompile(`\D`)
 
 type Server struct {
 	Repo           *db.Repository
@@ -156,8 +159,9 @@ func (s *Server) handlePhones(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAddPhone(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		logErr("add phone", s.Repo.AddAllowedPhone(r.FormValue("phone"), r.FormValue("description")))
+	// O WhatsApp identifica o remetente só por dígitos: "+55 (11) 9..." nunca casaria.
+	if phone := nonDigits.ReplaceAllString(r.FormValue("phone"), ""); phone != "" {
+		logErr("add phone", s.Repo.AddAllowedPhone(phone, r.FormValue("description")))
 	}
 	s.handlePhones(w, r)
 }
